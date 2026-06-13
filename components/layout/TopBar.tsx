@@ -10,7 +10,7 @@ export function TopBar() {
 
   return (
     <>
-      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/95 px-4 py-2.5 backdrop-blur-md lg:hidden">
+      <header className="sticky top-0 z-40 flex items-center justify-between border-b border-[var(--color-border)] bg-[var(--color-bg-secondary)]/95 px-4 pb-2.5 pt-[max(0.625rem,env(safe-area-inset-top))] backdrop-blur-md lg:hidden">
         <button
           onClick={() => setMenuOpen(true)}
           aria-label="Buka menu"
