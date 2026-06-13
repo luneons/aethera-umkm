@@ -5,15 +5,18 @@ import { getSetting } from "@/lib/db/queries/settings";
 export const OPENROUTER_KEY_SETTING = "openrouter_api_key";
 export const OPENROUTER_MODEL_SETTING = "openrouter_model";
 
-export const DEFAULT_MODEL = "openai/gpt-4o-mini";
+export const DEFAULT_MODEL = "nvidia/nemotron-3-super-120b-a12b:free";
 
 export const AVAILABLE_MODELS = [
-  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (cepat & murah)" },
-  { value: "openai/gpt-4o", label: "GPT-4o (akurat)" },
-  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet" },
-  { value: "google/gemini-flash-1.5", label: "Gemini Flash 1.5" },
-  { value: "meta-llama/llama-3.1-8b-instruct", label: "Llama 3.1 8B (hemat)" },
-  { value: "deepseek/deepseek-chat", label: "DeepSeek Chat" },
+  { value: "nvidia/nemotron-3-super-120b-a12b:free", label: "Nemotron 120B (gratis ⭐)" },
+  { value: "deepseek/deepseek-chat:free", label: "DeepSeek Chat (gratis)" },
+  { value: "meta-llama/llama-4-maverick:free", label: "Llama 4 Maverick (gratis)" },
+  { value: "google/gemma-3-27b-it:free", label: "Gemma 3 27B (gratis)" },
+  { value: "openai/gpt-4o-mini", label: "GPT-4o Mini (berbayar)" },
+  { value: "openai/gpt-4o", label: "GPT-4o (berbayar)" },
+  { value: "anthropic/claude-3.5-sonnet", label: "Claude 3.5 Sonnet (berbayar)" },
+  { value: "google/gemini-flash-1.5", label: "Gemini Flash 1.5 (berbayar)" },
+  { value: "deepseek/deepseek-chat", label: "DeepSeek Chat (berbayar)" },
 ];
 
 export interface ChatMessage {
