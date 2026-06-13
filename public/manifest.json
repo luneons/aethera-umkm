@@ -1,0 +1,23 @@
+{
+  "name": "AETHERA UMKM",
+  "short_name": "Aethera",
+  "description": "Pencatatan omset penjualan dan pembelian untuk UMKM",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0D0F14",
+  "theme_color": "#F5A623",
+  "orientation": "any",
+  "categories": ["finance", "business", "productivity"],
+  "lang": "id",
+  "icons": [
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Catat Penjualan", "url": "/penjualan/tambah" },
+    { "name": "Catat Pembelian", "url": "/pembelian/tambah" }
+  ]
+}

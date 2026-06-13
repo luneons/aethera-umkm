@@ -1,26 +1,144 @@
 @import "tailwindcss";
 
+/* ============================================================
+   AETHERA UMKM — Design Tokens
+   Tema: Dark Elegant + Accent Gold/Amber
+   ============================================================ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Primary Background */
+  --color-bg-primary: #0d0f14;
+  --color-bg-secondary: #141720;
+  --color-bg-card: #1c2030;
+  --color-bg-elevated: #242840;
+
+  /* Brand Accent */
+  --color-accent-gold: #f5a623;
+  --color-accent-amber: #ff8c42;
+  --color-accent-cyan: #4fc3f7;
+
+  /* Status */
+  --color-success: #4caf50;
+  --color-danger: #f44336;
+  --color-warning: #ffc107;
+  --color-info: #2196f3;
+
+  /* Text */
+  --color-text-primary: #f0f2f8;
+  --color-text-secondary: #9ba3b8;
+  --color-text-muted: #5c6478;
+
+  /* Border */
+  --color-border: #2a3050;
+  --color-border-hover: #3d4870;
 }
 
+[data-theme="light"] {
+  --color-bg-primary: #f8f9fc;
+  --color-bg-secondary: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-elevated: #eef1f8;
+  --color-text-primary: #1a1d2e;
+  --color-text-secondary: #4a5270;
+  --color-text-muted: #8a90a6;
+  --color-border: #e2e5f0;
+  --color-border-hover: #c7cde0;
+}
+
+/* Expose tokens to Tailwind utilities (v4 @theme inline) */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg-primary: var(--color-bg-primary);
+  --color-bg-secondary: var(--color-bg-secondary);
+  --color-bg-card: var(--color-bg-card);
+  --color-bg-elevated: var(--color-bg-elevated);
+  --color-gold: var(--color-accent-gold);
+  --color-amber: var(--color-accent-amber);
+  --color-cyan: var(--color-accent-cyan);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+  --color-info: var(--color-info);
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-border-base: var(--color-border);
+  --color-border-hover: var(--color-border-hover);
+
+  --font-heading: var(--font-jakarta), "Inter", sans-serif;
+  --font-body: var(--font-inter), "Nunito", sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--color-border);
+}
+
+html,
+body {
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5 {
+  font-family: var(--font-heading);
+}
+
+/* Hide scrollbar where useful but keep functionality */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -468px 0;
+  }
+  100% {
+    background-position: 468px 0;
+  }
+}
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--color-bg-card) 0%,
+    var(--color-bg-elevated) 50%,
+    var(--color-bg-card) 100%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Number input: remove spinners */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }

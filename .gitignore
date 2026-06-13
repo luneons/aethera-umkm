@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Environment & secrets
+.env
+.env.local
+.env*.local
+
+# Editor
+.vscode/
+.idea/
+
+# Generated scripts
+scripts/
