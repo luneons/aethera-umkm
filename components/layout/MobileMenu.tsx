@@ -46,7 +46,7 @@ export function MobileMenu({ open, onClose }: Props) {
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={handleClose} />
       <div
         ref={panelRef}
-        className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-secondary)] p-4"
+        className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-[var(--color-border)] bg-[var(--color-bg-secondary)] px-4 pb-4 pt-[max(1rem,env(safe-area-inset-top))]"
       >
         <div className="mb-5 flex items-center justify-between">
           <Link href="/dashboard" className="flex items-center gap-3">
