@@ -23,20 +23,31 @@ export const metadata: Metadata = {
   applicationName: "AETHERA UMKM",
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Aethera",
   },
+  formatDetection: {
+    telephone: false,
+  },
   icons: {
-    icon: "/icons/icon.svg",
-    apple: "/icons/icon.svg",
+    icon: [
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [{ url: "/icons/apple-touch-icon.png", sizes: "180x180" }],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0D0F14",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#0D0F14" },
+    { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
+  userScalable: false,
   viewportFit: "cover",
 };
 

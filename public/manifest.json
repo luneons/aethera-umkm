@@ -1,23 +1,86 @@
 {
-  "name": "AETHERA UMKM",
+  "id": "/?source=pwa",
+  "name": "AETHERA UMKM — Pencatatan Omset",
   "short_name": "Aethera",
-  "description": "Pencatatan omset penjualan dan pembelian untuk UMKM",
-  "start_url": "/",
+  "description": "Aplikasi pencatatan omset penjualan dan pembelian untuk UMKM Indonesia. Ringan, offline-first, lengkap dengan laporan, stok, dan analisis AI.",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui", "browser"],
   "background_color": "#0D0F14",
-  "theme_color": "#F5A623",
-  "orientation": "any",
-  "categories": ["finance", "business", "productivity"],
+  "theme_color": "#0D0F14",
+  "orientation": "portrait-primary",
+  "dir": "ltr",
   "lang": "id",
+  "categories": ["finance", "business", "productivity"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": ["navigate-existing", "auto"]
+  },
+  "edge_side_panel": {
+    "preferred_width": 420
+  },
+  "handle_links": "preferred",
   "icons": [
-    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icons/icon-72.png", "sizes": "72x72", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
     { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-1.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Dashboard ringkasan omset harian"
+    },
+    {
+      "src": "/screenshots/mobile-2.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Laporan & analisis penjualan"
+    },
+    {
+      "src": "/screenshots/mobile-3.png",
+      "sizes": "1080x1920",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Catat transaksi dengan cepat"
+    },
+    {
+      "src": "/screenshots/desktop-1.png",
+      "sizes": "1920x1080",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Dashboard AETHERA UMKM di desktop"
+    }
+  ],
   "shortcuts": [
-    { "name": "Catat Penjualan", "url": "/penjualan/tambah" },
-    { "name": "Catat Pembelian", "url": "/pembelian/tambah" }
+    {
+      "name": "Catat Penjualan",
+      "short_name": "Penjualan",
+      "description": "Catat transaksi penjualan baru",
+      "url": "/penjualan/tambah?source=pwa",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Catat Pembelian",
+      "short_name": "Pembelian",
+      "description": "Catat transaksi pembelian baru",
+      "url": "/pembelian/tambah?source=pwa",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Lihat Laporan",
+      "short_name": "Laporan",
+      "description": "Lihat laporan & analisis bisnis",
+      "url": "/laporan?source=pwa",
+      "icons": [{ "src": "/icons/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    }
   ]
 }
