@@ -1,20 +1,25 @@
 "use client";
 
 import { getSetting, setSetting } from "@/lib/db/queries/settings";
+import { getDeviceId } from "./device";
 
 /**
- * Premium licensing — offline soft-gate with HMAC-SHA256.
+ * Premium licensing — offline soft-gate with HMAC-SHA256 + device binding.
  *
- * Security improvements v2:
- * - Full 43-char base64url signature (256-bit → ~32 bytes) instead of 24-char truncated
+ * Security improvements v3:
+ * - Full 43-char base64url signature (256-bit) — not truncated
  * - Strict format validation: exactly 2 dot-separated segments
  * - Payload field validation before trusting content
- * - Constant-time comparison via crypto.subtle.verify to prevent timing attacks
- * - Key clamped: max length 4096 chars to prevent DoS via oversized input
+ * - Constant-time comparison via crypto.subtle.verify
+ * - Key clamped: max 4096 chars to prevent DoS
+ * - DEVICE BINDING: a key may carry a `device` field. If present, it only
+ *   activates on the device whose ID matches. This stops casual key sharing
+ *   (e.g. forwarding the key in a WhatsApp group). Keys with device=null are
+ *   unbound (work anywhere) for backward compatibility / special cases.
  *
- * NOTE: Because the secret lives in the client bundle this is a SOFT gate —
- * it deters casual bypass. Anyone who extracts the bundle can forge keys.
- * For hard enforcement, add a server-side validation endpoint.
+ * NOTE: Still a SOFT gate — the secret ships in the client bundle, so a
+ * determined attacker who extracts it can forge keys. Device binding raises
+ * the bar significantly against the realistic threat (sharing among friends).
  */
 
 // Secret is intentionally non-sensitive; rotate yearly by updating the year suffix.
@@ -29,6 +34,7 @@ export interface LicensePayload {
   name: string;
   plan: "premium";
   exp: number | null; // epoch ms, null = lifetime
+  device?: string | null; // bound device id; null/absent = unbound (works anywhere)
 }
 
 export interface LicenseStatus {
@@ -109,6 +115,7 @@ export async function generateLicense(payload: LicensePayload): Promise<string> 
     name: String(payload.name).slice(0, 120).trim(),
     plan: "premium",
     exp: typeof payload.exp === "number" ? Math.floor(payload.exp) : null,
+    device: payload.device ? String(payload.device).slice(0, 64).trim() : null,
   };
   const p = b64urlEncodeStr(JSON.stringify(clean));
   const sig = await sign(p);
@@ -164,6 +171,18 @@ export async function validateLicense(rawKey: string): Promise<LicenseStatus> {
     if (typed.exp !== null && typeof typed.exp === "number") {
       if (Date.now() > typed.exp) {
         return { active: false, payload: typed, reason: "Lisensi sudah kedaluwarsa" };
+      }
+    }
+
+    // Device binding check — if the key is bound, it must match THIS device
+    if (typed.device) {
+      const myDevice = await getDeviceId();
+      if (typed.device !== myDevice) {
+        return {
+          active: false,
+          payload: typed,
+          reason: "Lisensi ini terdaftar untuk perangkat lain. Hubungi admin untuk pindah perangkat.",
+        };
       }
     }
 

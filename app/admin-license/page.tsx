@@ -118,12 +118,13 @@ export default function AdminLicensePage() {
   const [authed, setAuthed]     = useState(false);
   const [checking, setChecking] = useState(true);
   const [name, setName]         = useState("");
+  const [deviceId, setDeviceId] = useState("");
   const [planIdx, setPlan]      = useState(1);
   const [result, setResult]     = useState<string | null>(null);
   const [copied, setCopied]     = useState(false);
   const [verifyKey, setVerify]  = useState("");
   const [verifyResult, setVResult] = useState<string | null>(null);
-  const [history, setHistory]   = useState<{ name: string; plan: string; key: string; exp: string; generated: string }[]>([]);
+  const [history, setHistory]   = useState<{ name: string; plan: string; key: string; exp: string; device: string; generated: string }[]>([]);
 
   useEffect(() => {
     setAuthed(sessionStorage.getItem(SESSION_KEY) === "1");
@@ -133,9 +134,15 @@ export default function AdminLicensePage() {
   const handleGenerate = async () => {
     const cleanName = name.trim().slice(0, MAX_NAME_LENGTH);
     if (!cleanName) { alert("Isi nama usaha / pembeli dulu"); return; }
+    const cleanDevice = deviceId.trim().slice(0, 64);
     const plan = ADMIN_PLANS[planIdx];
     const exp = plan.days ? Date.now() + plan.days * 86_400_000 : null;
-    const payload: LicensePayload = { name: cleanName, plan: "premium", exp };
+    const payload: LicensePayload = {
+      name: cleanName,
+      plan: "premium",
+      exp,
+      device: cleanDevice || null,
+    };
     const key = await generateLicense(payload);
     setResult(key);
     setCopied(false);
@@ -144,6 +151,7 @@ export default function AdminLicensePage() {
       plan: plan.label,
       key,
       exp: exp ? formatDate(new Date(exp)) : "Lifetime",
+      device: cleanDevice || "Tidak terikat (bisa di perangkat mana saja)",
       generated: new Date().toLocaleString("id-ID"),
     }, ...prev]);
   };
@@ -160,9 +168,13 @@ export default function AdminLicensePage() {
     const status = await validateLicense(k);
     if (status.active) {
       const exp = status.payload?.exp ? `Berlaku s/d ${formatDate(new Date(status.payload.exp))}` : "Lifetime";
-      setVResult(`✅ VALID — ${status.payload?.name} · ${exp}`);
+      const dev = status.payload?.device ? ` · 🔒 terikat ke ${status.payload.device}` : " · 🔓 tidak terikat";
+      setVResult(`✅ VALID — ${status.payload?.name} · ${exp}${dev}`);
     } else {
-      setVResult(`❌ TIDAK VALID — ${status.reason ?? "Unknown"}`);
+      // Even if not active on THIS device, decode the payload info if it's just device-mismatch
+      const reason = status.reason ?? "Unknown";
+      const dev = status.payload?.device ? ` (terikat ke ${status.payload.device})` : "";
+      setVResult(`❌ ${reason}${dev}`);
     }
   };
 
@@ -177,8 +189,10 @@ export default function AdminLicensePage() {
       `1. Buka aplikasi → menu *Premium*\n` +
       `2. Scroll ke bawah → bagian *Sudah punya License Key?*\n` +
       `3. Paste key di atas → klik *Aktifkan Premium*\n\n` +
-      `Berlaku hingga: *${sanitise(entry.exp)}*\n\n` +
-      `Ada pertanyaan? Balas pesan ini ya 😊`;
+      `Berlaku hingga: *${sanitise(entry.exp)}*\n` +
+      `Perangkat: *${sanitise(entry.device)}*\n\n` +
+      `⚠️ License ini hanya bisa dipakai di perangkat kamu sendiri. Jangan dibagikan ya.\n\n` +
+      `Ada pertanyaan? Balas pesan ini 😊`;
     window.open(`https://wa.me/?text=${encodeURIComponent(pesan)}`, "_blank");
   };
 
@@ -218,6 +232,23 @@ export default function AdminLicensePage() {
             maxLength={MAX_NAME_LENGTH}
             style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2d38", background: "#13151b", color: "#f0f2f8", fontSize: 14, boxSizing: "border-box" }}
           />
+        </div>
+
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ display: "block", fontSize: 12, color: "#9ba3b8", marginBottom: 6 }}>
+            Device ID Pembeli (untuk kunci 1 perangkat)
+          </label>
+          <input
+            value={deviceId}
+            onChange={(e) => setDeviceId(e.target.value.slice(0, 64))}
+            placeholder="cth: A7K-2Xq-9Fp  (minta dari pembeli)"
+            maxLength={64}
+            style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2d38", background: "#13151b", color: "#f0f2f8", fontSize: 14, boxSizing: "border-box", fontFamily: "monospace" }}
+          />
+          <p style={{ fontSize: 11, color: "#6b7280", margin: "6px 0 0", lineHeight: 1.5 }}>
+            💡 Pembeli bisa lihat Device ID-nya di menu <strong>Premium</strong>. Jika diisi, license
+            hanya aktif di perangkat itu (anti-sharing). Kosongkan untuk license bebas perangkat.
+          </p>
         </div>
 
         <div style={{ marginBottom: 16 }}>
@@ -263,6 +294,7 @@ export default function AdminLicensePage() {
                   <div>
                     <p style={{ fontWeight: 700, fontSize: 14, margin: 0 }}>{sanitise(entry.name)}</p>
                     <p style={{ fontSize: 12, color: "#9ba3b8", margin: "2px 0 0" }}>{sanitise(entry.plan)} · s/d {sanitise(entry.exp)}</p>
+                    <p style={{ fontSize: 11, color: "#6b7280", margin: "2px 0 0", fontFamily: "monospace" }}>🔒 {sanitise(entry.device)}</p>
                   </div>
                   <span style={{ fontSize: 11, color: "#6b7280" }}>{entry.generated}</span>
                 </div>
@@ -301,11 +333,11 @@ export default function AdminLicensePage() {
       <div style={{ padding: 16, borderRadius: 12, background: "rgba(245,166,35,0.05)", border: "1px solid rgba(245,166,35,0.2)", marginBottom: 16 }}>
         <p style={{ fontWeight: 700, fontSize: 13, margin: "0 0 8px", color: "#f5a623" }}>📖 Alur setelah ada yang beli:</p>
         <ol style={{ margin: 0, paddingLeft: 18, fontSize: 12, color: "#9ba3b8", lineHeight: 2 }}>
-          <li>Pembeli kirim pesan WA ke kamu (dari tombol di halaman Premium)</li>
+          <li>Pembeli kirim pesan WA + <strong>Device ID</strong> mereka (dari menu Premium)</li>
           <li>Konfirmasi pembayaran (transfer / QRIS dll)</li>
-          <li>Di sini → isi nama → pilih paket → Generate</li>
+          <li>Di sini → isi nama + <strong>Device ID pembeli</strong> → pilih paket → Generate</li>
           <li>Klik <strong style={{ color: "#25d366" }}>Kirim WA</strong> → pesan terisi otomatis → send ke pembeli</li>
-          <li>Pembeli buka app → Premium → input key → Aktifkan ✓</li>
+          <li>Pembeli buka app → Premium → input key → Aktifkan ✓ (hanya jalan di perangkatnya)</li>
         </ol>
       </div>
 

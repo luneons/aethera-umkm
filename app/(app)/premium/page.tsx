@@ -18,6 +18,7 @@ import {
   Package,
   ChevronRight,
   Star,
+  Smartphone,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { PageTransition } from "@/components/PageTransition";
@@ -37,6 +38,7 @@ import {
   pulseGlow,
   shineSweep,
 } from "@/lib/animations/gsap";
+import { getDeviceId } from "@/lib/premium/device";
 
 // ─── Kontak & Harga ───────────────────────────────────────────────────────────
 
@@ -53,14 +55,15 @@ function formatRp(n: number) {
   return "Rp" + new Intl.NumberFormat("id-ID").format(n);
 }
 
-function openWA(plan: "bulanan" | "tahunan" | "lifetime") {
+function openWA(plan: "bulanan" | "tahunan" | "lifetime", deviceId: string) {
+  const devLine = deviceId ? `\n\nDevice ID saya: ${deviceId}` : "";
   let pesan = "";
   if (plan === "bulanan") {
-    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Bulanan* (${formatRp(HARGA_BULANAN)}/bln). Mohon info cara pembayarannya.`;
+    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Bulanan* (${formatRp(HARGA_BULANAN)}/bln). Mohon info cara pembayarannya.${devLine}`;
   } else if (plan === "tahunan") {
-    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Tahunan* (${formatRp(HARGA_TAHUNAN)}/thn — hemat ${formatRp(HEMAT_TAHUNAN)}). Mohon info cara pembayarannya.`;
+    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Tahunan* (${formatRp(HARGA_TAHUNAN)}/thn — hemat ${formatRp(HEMAT_TAHUNAN)}). Mohon info cara pembayarannya.${devLine}`;
   } else {
-    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Lifetime* (${formatRp(HARGA_LIFETIME)} — bayar sekali, pakai selamanya). Mohon info cara pembayarannya.`;
+    pesan = `Halo, saya ingin berlangganan AETHERA Premium *Lifetime* (${formatRp(HARGA_LIFETIME)} — bayar sekali, pakai selamanya). Mohon info cara pembayarannya.${devLine}`;
   }
   window.open(
     `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(pesan)}`,
@@ -163,7 +166,22 @@ export default function PremiumPage() {
   const lifetimeRef = useRef<HTMLButtonElement>(null);
   const ctaRef = useRef<HTMLButtonElement>(null);
 
+  const [deviceId, setDeviceId] = useState("");
+  const [deviceCopied, setDeviceCopied] = useState(false);
+
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Load this device's ID for binding
+  useEffect(() => {
+    getDeviceId().then(setDeviceId);
+  }, []);
+
+  const copyDevice = () => {
+    if (!deviceId) return;
+    navigator.clipboard.writeText(deviceId).catch(() => {});
+    setDeviceCopied(true);
+    setTimeout(() => setDeviceCopied(false), 2000);
+  };
 
   // Animate pricing cards in on mount (only when not active)
   useEffect(() => {
@@ -203,7 +221,8 @@ export default function PremiumPage() {
     setBusy(true);
     try {
       const profile = await getBusinessProfile();
-      const trialKey = await generateLicense({ name: profile?.name ?? "Trial", plan: "premium", exp: Date.now() + 30 * 24 * 60 * 60 * 1000 });
+      const dev = await getDeviceId();
+      const trialKey = await generateLicense({ name: profile?.name ?? "Trial", plan: "premium", exp: Date.now() + 30 * 24 * 60 * 60 * 1000, device: dev });
       const status = await activateLicense(trialKey);
       if (status.active) { await refresh(); toast.success("Trial Premium 30 hari aktif!"); }
     } finally { setBusy(false); }
@@ -409,7 +428,7 @@ export default function PremiumPage() {
             <div className="flex flex-col gap-2">
               <button
                 ref={ctaRef}
-                onClick={() => openWA(selectedPlan)}
+                onClick={() => openWA(selectedPlan, deviceId)}
                 className="group relative flex items-center justify-between gap-3 overflow-hidden rounded-2xl px-5 py-4 text-white shadow-lg shadow-[#25D366]/30 transition-all hover:brightness-105 active:scale-[0.98]"
                 style={{
                   background: "linear-gradient(110deg, #25D366 0%, #25D366 40%, #4ce88a 50%, #25D366 60%, #25D366 100%)",
@@ -500,7 +519,7 @@ export default function PremiumPage() {
         {/* ── CTA repeat bawah (hanya kalau belum aktif) ── */}
         {!active && (
           <button
-            onClick={() => openWA(selectedPlan)}
+            onClick={() => openWA(selectedPlan, deviceId)}
             className="flex items-center justify-center gap-2 rounded-2xl bg-[#25D366] py-4 text-sm font-bold text-white shadow-lg shadow-[#25D366]/30 transition-all hover:bg-[#20BD5A] active:scale-[0.98]"
           >
             <MessageCircle size={18} />
@@ -514,6 +533,29 @@ export default function PremiumPage() {
           <p className="mb-3 text-xs text-[var(--color-text-secondary)]">
             Masukkan key yang kamu terima setelah pembayaran dikonfirmasi.
           </p>
+
+          {/* Device ID — untuk dikirim ke admin saat beli */}
+          <div className="mb-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg-elevated)] p-3">
+            <div className="flex items-center gap-2">
+              <Smartphone size={15} className="shrink-0 text-[var(--color-accent-gold)]" />
+              <span className="text-xs font-medium text-[var(--color-text-secondary)]">Device ID perangkat ini</span>
+            </div>
+            <div className="mt-2 flex items-center gap-2">
+              <code className="flex-1 select-all rounded-lg bg-[var(--color-bg-card)] px-3 py-2 font-mono text-sm font-bold tracking-wider text-[var(--color-accent-gold)]">
+                {deviceId || "..."}
+              </code>
+              <button
+                onClick={copyDevice}
+                className="shrink-0 rounded-lg border border-[var(--color-border)] px-3 py-2 text-xs font-medium hover:bg-[var(--color-bg-card)]"
+              >
+                {deviceCopied ? "✓ Tersalin" : "Salin"}
+              </button>
+            </div>
+            <p className="mt-2 text-[11px] leading-relaxed text-[var(--color-text-muted)]">
+              Kirim Device ID ini ke admin saat membeli. License akan dikunci ke perangkat ini agar aman dan tidak bisa dipakai orang lain.
+            </p>
+          </div>
+
           <div className="flex flex-col gap-2">
             <Field label="">
               <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxxx.xxxxx" />
