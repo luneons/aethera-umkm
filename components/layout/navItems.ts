@@ -11,6 +11,9 @@ import {
   Receipt,
   Users,
   Crown,
+  Truck,
+  UserCircle,
+  ArrowLeftRight,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,7 +29,10 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/pembelian", label: "Pembelian", icon: TrendingDown },
   { href: "/produk", label: "Produk", icon: Package },
   { href: "/stok", label: "Stok", icon: Boxes },
+  { href: "/pelanggan", label: "Pelanggan", icon: UserCircle },
+  { href: "/supplier", label: "Supplier", icon: Truck },
   { href: "/laporan", label: "Laporan", icon: BarChart3 },
+  { href: "/arus-kas", label: "Arus Kas", icon: ArrowLeftRight },
   { href: "/insight", label: "AI Insight", icon: Sparkles },
   { href: "/berulang", label: "Berulang", icon: Repeat },
   { href: "/pajak", label: "Pajak", icon: Receipt },

@@ -18,7 +18,7 @@ export async function saveBusinessProfile(input: {
   if (existing) {
     await execute(
       `UPDATE business_profile
-       SET name = ?, type = ?, owner = ?, logo_base64 = COALESCE(?, logo_base64),
+       SET name = ?, type = ?, owner = ?, logo_base64 = ?,
            updated_at = datetime('now')
        WHERE id = ?`,
       [input.name, input.type ?? null, input.owner ?? null, input.logoBase64 ?? null, existing.id]

@@ -17,15 +17,16 @@ import { TransactionListItem } from "@/components/TransactionListItem";
 import { CategoryDonut } from "@/components/charts/CategoryDonut";
 import { getPurchases, deletePurchase } from "@/lib/db/queries/purchases";
 import { getCategoryBreakdown } from "@/lib/db/queries/reports";
+import { getBusinessProfile } from "@/lib/db/queries/settings";
+import { generateReceiptPDF } from "@/lib/utils/export";
 import { useTxDrawer } from "@/lib/stores/useTxDrawer";
 import { useAppStore } from "@/lib/stores/useAppStore";
 import { useConfirm } from "@/lib/stores/useConfirm";
 import { toast } from "@/lib/stores/useToastStore";
 import { todayRange, thisWeekRange, thisMonthRange } from "@/lib/utils/ranges";
-import { formatRupiah, formatDateTime } from "@/lib/utils/format";
+import { formatRupiah, formatDateTime, fromSqlDateTime } from "@/lib/utils/format";
 import { animateIn } from "@/lib/animations/gsap";
 import type { Purchase, CategoryBreakdown } from "@/lib/db/types";
-
 export default function PembelianPage() {
   const openDrawer = useTxDrawer((s) => s.openDrawer);
   const dataVersion = useAppStore((s) => s.dataVersion);
@@ -93,6 +94,20 @@ export default function PembelianPage() {
     await deletePurchase(id);
     bumpData();
     toast.success("Transaksi dihapus");
+  };
+
+  const handlePrint = async (p: Purchase) => {
+    const prof = await getBusinessProfile();
+    generateReceiptPDF(
+      {
+        businessName: prof?.name ?? "Usaha Saya",
+        owner: prof?.owner,
+        date: fromSqlDateTime(p.transaction_at),
+        note: p.notes ?? undefined,
+      },
+      [{ name: p.item_name, qty: p.quantity, unitPrice: p.unit_price }]
+    );
+    toast.success("Nota dibuat");
   };
 
   return (
@@ -171,6 +186,7 @@ export default function PembelianPage() {
                   amount={p.total_amount}
                   onEdit={() => openDrawer("pembelian", p.id)}
                   onDelete={() => handleDelete(p.id)}
+                  onPrint={() => handlePrint(p)}
                 />
               </div>
             ))}

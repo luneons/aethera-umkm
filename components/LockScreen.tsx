@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Lock, Delete } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import { verifyPin } from "@/lib/utils/appLock";
+import { verifyPin, getLockoutStatus } from "@/lib/utils/appLock";
 import { useLockStore } from "@/lib/stores/useLockStore";
 import { shake } from "@/lib/animations/gsap";
 
@@ -12,11 +12,29 @@ export function LockScreen() {
   const unlock = useLockStore((s) => s.unlock);
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
+  const [lockedOut, setLockedOut] = useState(false);
+  const [countdown, setCountdown] = useState(0);
   const dotsRef = useRef<HTMLDivElement>(null);
 
+  // Check lockout on mount and whenever locked state changes
   useEffect(() => {
-    if (!locked) setPin("");
+    if (!locked) { setPin(""); setLockedOut(false); setCountdown(0); return; }
+    getLockoutStatus().then(({ locked: lo, remainingMs }) => {
+      if (lo) { setLockedOut(true); setCountdown(Math.ceil(remainingMs / 1000)); }
+    });
   }, [locked]);
+
+  // Countdown timer
+  useEffect(() => {
+    if (!lockedOut || countdown <= 0) return;
+    const t = setInterval(() => {
+      setCountdown((c) => {
+        if (c <= 1) { setLockedOut(false); clearInterval(t); return 0; }
+        return c - 1;
+      });
+    }, 1000);
+    return () => clearInterval(t);
+  }, [lockedOut, countdown]);
 
   useEffect(() => {
     if (pin.length === 6) {
@@ -29,6 +47,10 @@ export function LockScreen() {
           setTimeout(() => {
             setPin("");
             setError(false);
+            // Re-check if now locked out after this failure
+            getLockoutStatus().then(({ locked: lo, remainingMs }) => {
+              if (lo) { setLockedOut(true); setCountdown(Math.ceil(remainingMs / 1000)); }
+            });
           }, 500);
         }
       });
@@ -38,9 +60,10 @@ export function LockScreen() {
   if (!locked) return null;
 
   const press = (digit: string) => {
-    if (pin.length < 6) setPin((p) => p + digit);
+    if (lockedOut || pin.length >= 6) return;
+    setPin((p) => p + digit);
   };
-  const backspace = () => setPin((p) => p.slice(0, -1));
+  const backspace = () => { if (!lockedOut) setPin((p) => p.slice(0, -1)); };
 
   return (
     <div className="fixed inset-0 z-[400] flex flex-col items-center justify-center gap-8 bg-[var(--color-bg-primary)] px-6">
@@ -73,12 +96,20 @@ export function LockScreen() {
         ))}
       </div>
 
+      {lockedOut && (
+        <div className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-5 py-3 text-center text-sm text-[var(--color-danger)]">
+          Terlalu banyak percobaan salah.<br />
+          Coba lagi dalam <strong>{countdown}</strong> detik.
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-4">
         {["1", "2", "3", "4", "5", "6", "7", "8", "9"].map((d) => (
           <button
             key={d}
             onClick={() => press(d)}
-            className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-border)] text-xl font-semibold transition-colors hover:bg-[var(--color-bg-elevated)] active:scale-95"
+            disabled={lockedOut}
+            className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-border)] text-xl font-semibold transition-colors hover:bg-[var(--color-bg-elevated)] active:scale-95 disabled:opacity-30"
           >
             {d}
           </button>
@@ -86,14 +117,16 @@ export function LockScreen() {
         <div />
         <button
           onClick={() => press("0")}
-          className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-border)] text-xl font-semibold transition-colors hover:bg-[var(--color-bg-elevated)] active:scale-95"
+          disabled={lockedOut}
+          className="grid h-16 w-16 place-items-center rounded-full border border-[var(--color-border)] text-xl font-semibold transition-colors hover:bg-[var(--color-bg-elevated)] active:scale-95 disabled:opacity-30"
         >
           0
         </button>
         <button
           onClick={backspace}
+          disabled={lockedOut}
           aria-label="Hapus"
-          className="grid h-16 w-16 place-items-center rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)]"
+          className="grid h-16 w-16 place-items-center rounded-full text-[var(--color-text-secondary)] hover:bg-[var(--color-bg-elevated)] disabled:opacity-30"
         >
           <Delete size={22} />
         </button>

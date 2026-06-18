@@ -26,9 +26,26 @@ export async function getSyncConfig() {
   return { url, key, lastAt };
 }
 
+function isValidSyncUrl(raw: string): boolean {
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "https:") return false;
+    const host = url.hostname.toLowerCase();
+    if (host === "localhost" || /^127\./.test(host) || /^10\./.test(host)) return false;
+    if (/^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host)) return false;
+    if (host === "0.0.0.0" || host.endsWith(".local") || host.endsWith(".internal")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function saveSyncConfig(url: string, key: string) {
+  if (url && !isValidSyncUrl(url)) {
+    throw new Error("URL sinkronisasi tidak valid. Harus HTTPS dan bukan alamat internal.");
+  }
   await setSetting(SYNC_URL_SETTING, url);
-  await setSetting(SYNC_KEY_SETTING, key);
+  await setSetting(SYNC_KEY_SETTING, key.slice(0, 256));
 }
 
 export async function pushToCloud(): Promise<void> {
@@ -50,13 +67,21 @@ export async function pushToCloud(): Promise<void> {
 export async function pullFromCloud(): Promise<void> {
   const { url, key } = await getSyncConfig();
   if (!url) throw new Error("URL sinkronisasi belum diatur");
+  if (!isValidSyncUrl(url)) throw new Error("URL sinkronisasi tidak valid");
   const res = await fetch(url, {
     method: "GET",
     headers: { ...(key ? { "x-sync-key": key } : {}) },
   });
   if (!res.ok) throw new Error(`Gagal unduh (HTTP ${res.status})`);
+  // Cap download size at 50 MB to prevent memory exhaustion
+  const MAX_BYTES = 50 * 1024 * 1024;
+  const contentLength = res.headers.get("content-length");
+  if (contentLength && parseInt(contentLength, 10) > MAX_BYTES) {
+    throw new Error("File terlalu besar (maks 50 MB)");
+  }
   const buf = new Uint8Array(await res.arrayBuffer());
   if (buf.byteLength === 0) throw new Error("Tidak ada data di cloud");
+  if (buf.byteLength > MAX_BYTES) throw new Error("File terlalu besar (maks 50 MB)");
   await importDatabase(buf);
   await setSetting(SYNC_LAST_SETTING, new Date().toISOString());
 }

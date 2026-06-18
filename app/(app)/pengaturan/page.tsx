@@ -14,6 +14,7 @@ import {
   Monitor,
   Bell,
   BellOff,
+  ImagePlus,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -39,6 +40,7 @@ import { QrisSettings } from "@/components/settings/QrisSettings";
 import { WebhookSettings } from "@/components/settings/WebhookSettings";
 import { AchievementsGrid } from "@/components/AchievementsGrid";
 import { PremiumGate } from "@/components/PremiumGate";
+import { SeedButton } from "@/components/SeedButton";
 import { cn } from "@/lib/utils/cn";
 import { animatePageIn } from "@/lib/animations/gsap";
 import { Trophy } from "lucide-react";
@@ -63,8 +65,10 @@ export default function PengaturanPage() {
   const [type, setType] = useState("");
   const [owner, setOwner] = useState("");
   const [waNumber, setWaNumber] = useState("");
+  const [logoBase64, setLogoBase64] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
 
   // Notification state
@@ -78,6 +82,7 @@ export default function PengaturanPage() {
       setName(profile.name);
       setType(profile.type ?? "");
       setOwner(profile.owner ?? "");
+      setLogoBase64((profile as { logo_base64?: string | null }).logo_base64 ?? null);
     }
   }, [profile]);
 
@@ -108,13 +113,24 @@ export default function PengaturanPage() {
     }
     setSavingProfile(true);
     try {
-      await saveBusinessProfile({ name: name.trim(), type, owner: owner.trim() });
+      await saveBusinessProfile({ name: name.trim(), type, owner: owner.trim(), logoBase64: logoBase64 ?? undefined } as Parameters<typeof saveBusinessProfile>[0]);
       await setSetting("wa_number", waNumber.trim());
       await refreshProfile();
       toast.success("Profil usaha disimpan");
     } finally {
       setSavingProfile(false);
     }
+  };
+
+  const handleLogoFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    if (!file.type.startsWith("image/")) { toast.error("File harus berupa gambar"); return; }
+    if (file.size > 500 * 1024) { toast.error("Ukuran logo maks 500 KB"); return; }
+    const reader = new FileReader();
+    reader.onload = (ev) => setLogoBase64(ev.target?.result as string);
+    reader.readAsDataURL(file);
   };
 
   const handleBackup = async () => {
@@ -175,8 +191,7 @@ export default function PengaturanPage() {
     window.location.href = "/onboarding";
   };
 
-  const handleSaveNotification = async () => {
-    setSavingNotif(true);
+  const handleSaveNotification = async () => {    setSavingNotif(true);
     try {
       if (notifEnabled && notifPermission !== "granted") {
         const perm = await requestNotificationPermission();
@@ -206,6 +221,40 @@ export default function PengaturanPage() {
           Usaha
         </h2>
         <div className="flex flex-col gap-3">
+          {/* Logo upload */}
+          <div className="flex items-center gap-4">
+            <div className="relative">
+              {logoBase64 ? (
+                <img src={logoBase64} alt="Logo usaha" className="h-16 w-16 rounded-xl object-cover border border-[var(--color-border)]" />
+              ) : (
+                <div className="grid h-16 w-16 place-items-center rounded-xl border border-dashed border-[var(--color-border)] bg-[var(--color-bg-elevated)] text-[var(--color-text-muted)]">
+                  <ImagePlus size={20} />
+                </div>
+              )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-sm font-medium">Logo Usaha</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => logoRef.current?.click()}
+                  className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium hover:bg-[var(--color-bg-elevated)]"
+                >
+                  {logoBase64 ? "Ganti Logo" : "Upload Logo"}
+                </button>
+                {logoBase64 && (
+                  <button
+                    onClick={() => setLogoBase64(null)}
+                    className="rounded-lg border border-[var(--color-border)] px-3 py-1.5 text-xs font-medium text-[var(--color-danger)] hover:bg-[var(--color-bg-elevated)]"
+                  >
+                    Hapus
+                  </button>
+                )}
+              </div>
+              <p className="text-xs text-[var(--color-text-muted)]">JPG/PNG, maks 500 KB</p>
+            </div>
+            <input ref={logoRef} type="file" accept="image/*" className="hidden" onChange={handleLogoFile} />
+          </div>
+
           <Field label="Nama Usaha" required>
             <Input value={name} onChange={(e) => setName(e.target.value)} />
           </Field>
@@ -367,6 +416,9 @@ export default function PengaturanPage() {
       <PremiumGate feature="webhook">
         <WebhookSettings />
       </PremiumGate>
+
+      {/* Demo Data */}
+      <SeedButton onDone={() => bumpData()} />
 
       {/* About */}
       <Card>

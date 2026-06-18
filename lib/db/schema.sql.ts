@@ -133,6 +133,49 @@ CREATE TABLE IF NOT EXISTS webhook_log (
   created_at  TEXT DEFAULT (datetime('now'))
 );
 
+-- Master data supplier
+CREATE TABLE IF NOT EXISTS suppliers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  phone       TEXT,
+  address     TEXT,
+  notes       TEXT,
+  is_active   INTEGER DEFAULT 1,
+  created_at  TEXT DEFAULT (datetime('now')),
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Master data pelanggan (customer)
+CREATE TABLE IF NOT EXISTS customers (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  name        TEXT NOT NULL,
+  phone       TEXT,
+  address     TEXT,
+  notes       TEXT,
+  is_active   INTEGER DEFAULT 1,
+  total_spent REAL DEFAULT 0,
+  created_at  TEXT DEFAULT (datetime('now')),
+  updated_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Riwayat mutasi stok (stock ledger)
+CREATE TABLE IF NOT EXISTS stock_movements (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  product_id  INTEGER NOT NULL REFERENCES products(id),
+  delta       REAL NOT NULL,
+  reason      TEXT NOT NULL CHECK(reason IN ('penjualan','pembelian','opname','adjustment','retur')),
+  ref_id      INTEGER,
+  notes       TEXT,
+  stock_after REAL NOT NULL,
+  created_at  TEXT DEFAULT (datetime('now'))
+);
+
+-- Invoice counter per tahun
+CREATE TABLE IF NOT EXISTS invoice_counter (
+  year        INTEGER PRIMARY KEY,
+  last_seq    INTEGER DEFAULT 0
+);
+
 CREATE INDEX IF NOT EXISTS idx_sales_transaction_at ON sales(transaction_at);
 CREATE INDEX IF NOT EXISTS idx_purchases_transaction_at ON purchases(transaction_at);
 CREATE INDEX IF NOT EXISTS idx_sales_category ON sales(category_id);
@@ -152,6 +195,18 @@ export const COLUMN_MIGRATIONS: string[] = [
   "ALTER TABLE purchases ADD COLUMN channel TEXT",
   "ALTER TABLE sales ADD COLUMN cashier_id INTEGER",
   "ALTER TABLE sales ADD COLUMN cashier_name TEXT",
+  // v2 migrations
+  "ALTER TABLE sales ADD COLUMN invoice_number TEXT",
+  "ALTER TABLE purchases ADD COLUMN invoice_number TEXT",
+  "ALTER TABLE sales ADD COLUMN discount_amount REAL DEFAULT 0",
+  "ALTER TABLE purchases ADD COLUMN discount_amount REAL DEFAULT 0",
+  "ALTER TABLE sales ADD COLUMN shipping_fee REAL DEFAULT 0",
+  "ALTER TABLE purchases ADD COLUMN shipping_fee REAL DEFAULT 0",
+  "ALTER TABLE sales ADD COLUMN customer_id INTEGER",
+  "ALTER TABLE sales ADD COLUMN customer_name TEXT",
+  "ALTER TABLE purchases ADD COLUMN supplier_id INTEGER",
+  "ALTER TABLE business_profile ADD COLUMN logo_base64 TEXT",
+  "ALTER TABLE business_profile ADD COLUMN wa_number TEXT",
 ];
 
 /** Default categories seeded on first run. */

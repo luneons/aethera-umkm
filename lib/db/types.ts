@@ -47,11 +47,16 @@ export interface Sale {
   quantity: number;
   unit_price: number;
   total_amount: number;
+  discount_amount?: number;
+  shipping_fee?: number;
   payment_method: PaymentMethod;
   notes: string | null;
+  invoice_number?: string | null;
   transaction_at: string;
   cashier_id?: number | null;
   cashier_name?: string | null;
+  customer_id?: number | null;
+  customer_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -65,9 +70,13 @@ export interface Purchase {
   quantity: number;
   unit_price: number;
   total_amount: number;
+  discount_amount?: number;
+  shipping_fee?: number;
   supplier: string | null;
+  supplier_id?: number | null;
   payment_method: PaymentMethod;
   notes: string | null;
+  invoice_number?: string | null;
   transaction_at: string;
   created_at: string;
   updated_at: string;
@@ -171,4 +180,59 @@ export interface TaxReport {
   grossRevenue: number;
   taxRate: number;
   taxDue: number;
+}
+
+// ─── Supplier ────────────────────────────────────────────────────────────────
+
+export interface Supplier {
+  id: number;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Customer ────────────────────────────────────────────────────────────────
+
+export interface Customer {
+  id: number;
+  name: string;
+  phone: string | null;
+  address: string | null;
+  notes: string | null;
+  is_active: number;
+  total_spent: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Stock Movement ──────────────────────────────────────────────────────────
+
+export type StockMovementReason = "penjualan" | "pembelian" | "opname" | "adjustment" | "retur";
+
+export interface StockMovement {
+  id: number;
+  product_id: number;
+  product_name?: string;
+  delta: number;
+  reason: StockMovementReason;
+  ref_id: number | null;
+  notes: string | null;
+  stock_after: number;
+  created_at: string;
+}
+
+// ─── Cart item (multi-item transaction) ──────────────────────────────────────
+
+export interface CartItem {
+  productId: number | null;
+  productName: string;
+  categoryId: number | null;
+  quantity: number;
+  unitPrice: number;
+  discountAmount: number;
+  totalAmount: number;
 }

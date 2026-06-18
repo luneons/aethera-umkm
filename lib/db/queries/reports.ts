@@ -189,3 +189,102 @@ export async function getWeekdayPattern(
     [from, to]
   );
 }
+
+/** Monthly cash flow: penjualan, pembelian, laba bersih per bulan dalam setahun */
+export async function getMonthlyCashFlow(
+  year: number
+): Promise<{ month: number; penjualan: number; pembelian: number; laba: number }[]> {
+  const from = `${year}-01-01 00:00:00`;
+  const to = `${year}-12-31 23:59:59`;
+
+  const sales = await query<{ month: number; total: number }>(
+    `SELECT CAST(strftime('%m', transaction_at) AS INTEGER) AS month,
+            SUM(total_amount) AS total
+     FROM sales WHERE transaction_at BETWEEN ? AND ?
+     GROUP BY month`,
+    [from, to]
+  );
+  const purchases = await query<{ month: number; total: number }>(
+    `SELECT CAST(strftime('%m', transaction_at) AS INTEGER) AS month,
+            SUM(total_amount) AS total
+     FROM purchases WHERE transaction_at BETWEEN ? AND ?
+     GROUP BY month`,
+    [from, to]
+  );
+
+  const map = new Map<number, { penjualan: number; pembelian: number }>();
+  for (let m = 1; m <= 12; m++) map.set(m, { penjualan: 0, pembelian: 0 });
+  for (const s of sales) {
+    const e = map.get(s.month)!;
+    e.penjualan = Number(s.total);
+  }
+  for (const p of purchases) {
+    const e = map.get(p.month)!;
+    e.pembelian = Number(p.total);
+  }
+
+  return Array.from(map.entries()).map(([month, v]) => ({
+    month,
+    penjualan: v.penjualan,
+    pembelian: v.pembelian,
+    laba: v.penjualan - v.pembelian,
+  }));
+}
+
+/** Year-over-year comparison: monthly sales for two years */
+export async function getYearOverYear(
+  year: number
+): Promise<{ month: number; thisYear: number; lastYear: number }[]> {
+  const [thisYear, lastYear] = await Promise.all([
+    getMonthlyCashFlow(year),
+    getMonthlyCashFlow(year - 1),
+  ]);
+  return thisYear.map((t, i) => ({
+    month: t.month,
+    thisYear: t.penjualan,
+    lastYear: lastYear[i]?.penjualan ?? 0,
+  }));
+}
+
+/** Daily cash flow for a specific month */
+export async function getDailyCashFlow(
+  year: number,
+  month: number
+): Promise<{ date: string; penjualan: number; pembelian: number; laba: number }[]> {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const from = `${year}-${pad(month)}-01 00:00:00`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const to = `${year}-${pad(month)}-${lastDay} 23:59:59`;
+
+  const sales = await query<{ date: string; total: number }>(
+    `SELECT date(transaction_at) AS date, SUM(total_amount) AS total
+     FROM sales WHERE transaction_at BETWEEN ? AND ? GROUP BY date`,
+    [from, to]
+  );
+  const purchases = await query<{ date: string; total: number }>(
+    `SELECT date(transaction_at) AS date, SUM(total_amount) AS total
+     FROM purchases WHERE transaction_at BETWEEN ? AND ? GROUP BY date`,
+    [from, to]
+  );
+
+  const map = new Map<string, { penjualan: number; pembelian: number }>();
+  for (let d = 1; d <= lastDay; d++) {
+    const key = `${year}-${pad(month)}-${pad(d)}`;
+    map.set(key, { penjualan: 0, pembelian: 0 });
+  }
+  for (const s of sales) {
+    const e = map.get(s.date);
+    if (e) e.penjualan = Number(s.total);
+  }
+  for (const p of purchases) {
+    const e = map.get(p.date);
+    if (e) e.pembelian = Number(p.total);
+  }
+
+  return Array.from(map.entries()).map(([date, v]) => ({
+    date,
+    penjualan: v.penjualan,
+    pembelian: v.pembelian,
+    laba: v.penjualan - v.pembelian,
+  }));
+}

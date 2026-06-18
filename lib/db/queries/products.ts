@@ -1,5 +1,6 @@
 import { execute, query, getDB, saveDB } from "../client";
-import type { Product } from "../types";
+import { recordStockMovement } from "./stockMovements";
+import type { Product, StockMovementReason } from "../types";
 
 export async function getProducts(includeInactive = true): Promise<Product[]> {
   const where = includeInactive ? "" : "WHERE is_active = 1";
@@ -105,7 +106,13 @@ export async function deleteProduct(id: number): Promise<void> {
  * Adjust stock for a product that tracks stock.
  * delta negative = reduce (sale), positive = add (purchase/restock).
  */
-export async function adjustStock(productId: number, delta: number): Promise<void> {
+export async function adjustStock(
+  productId: number,
+  delta: number,
+  reason: StockMovementReason = "adjustment",
+  refId?: number | null,
+  notes?: string | null
+): Promise<void> {
   const db = await getDB();
   db.run(
     `UPDATE products
@@ -114,4 +121,52 @@ export async function adjustStock(productId: number, delta: number): Promise<voi
     [delta, productId]
   );
   await saveDB();
+
+  // Record stock movement log
+  const rows = await query<{ stock: number; track_stock: number }>(
+    "SELECT stock, track_stock FROM products WHERE id = ?",
+    [productId]
+  );
+  if (rows[0] && rows[0].track_stock === 1) {
+    await recordStockMovement({
+      productId,
+      delta,
+      reason,
+      refId: refId ?? null,
+      notes: notes ?? null,
+      stockAfter: rows[0].stock,
+    });
+  }
+}
+
+/**
+ * Set stock to a specific value (for stock opname).
+ */
+export async function setStock(
+  productId: number,
+  newStock: number,
+  notes?: string | null
+): Promise<void> {
+  const rows = await query<{ stock: number }>(
+    "SELECT stock FROM products WHERE id = ?",
+    [productId]
+  );
+  const oldStock = rows[0]?.stock ?? 0;
+  const delta = newStock - oldStock;
+
+  const db = await getDB();
+  db.run(
+    `UPDATE products SET stock = ?, updated_at = datetime('now') WHERE id = ?`,
+    [newStock, productId]
+  );
+  await saveDB();
+
+  await recordStockMovement({
+    productId,
+    delta,
+    reason: "opname",
+    refId: null,
+    notes: notes ?? "Stock opname",
+    stockAfter: newStock,
+  });
 }

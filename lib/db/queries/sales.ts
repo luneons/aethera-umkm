@@ -1,6 +1,7 @@
 import { execute, query, getDB, saveDB } from "../client";
 import { toSqlDateTime } from "@/lib/utils/format";
 import { adjustStock } from "./products";
+import { addCustomerSpend } from "./customers";
 import type { PaymentMethod, Sale } from "../types";
 
 export interface SaleWriteInput {
@@ -10,12 +11,17 @@ export interface SaleWriteInput {
   quantity: number;
   unitPrice: number;
   totalAmount: number;
+  discountAmount?: number;
+  shippingFee?: number;
   paymentMethod: PaymentMethod;
   channel?: string | null;
   notes?: string | null;
   transactionAt: Date | string;
   cashierId?: number | null;
   cashierName?: string | null;
+  customerId?: number | null;
+  customerName?: string | null;
+  invoiceNumber?: string | null;
 }
 
 function normalizeDate(value: Date | string): string {
@@ -25,8 +31,10 @@ function normalizeDate(value: Date | string): string {
 export async function createSale(input: SaleWriteInput): Promise<number> {
   const id = await execute(
     `INSERT INTO sales
-       (product_id, product_name, category_id, quantity, unit_price, total_amount, payment_method, channel, notes, transaction_at, cashier_id, cashier_name)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (product_id, product_name, category_id, quantity, unit_price, total_amount,
+        discount_amount, shipping_fee, payment_method, channel, notes, transaction_at,
+        cashier_id, cashier_name, customer_id, customer_name, invoice_number)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.productId,
       input.productName,
@@ -34,16 +42,27 @@ export async function createSale(input: SaleWriteInput): Promise<number> {
       input.quantity,
       input.unitPrice,
       input.totalAmount,
+      input.discountAmount ?? 0,
+      input.shippingFee ?? 0,
       input.paymentMethod,
       input.channel ?? null,
       input.notes ?? null,
       normalizeDate(input.transactionAt),
       input.cashierId ?? null,
       input.cashierName ?? null,
+      input.customerId ?? null,
+      input.customerName ?? null,
+      input.invoiceNumber ?? null,
     ]
   );
   // Reduce stock on sale.
-  if (input.productId) await adjustStock(input.productId, -Math.abs(input.quantity));
+  if (input.productId) {
+    await adjustStock(input.productId, -Math.abs(input.quantity), "penjualan", id);
+  }
+  // Bump customer total_spent
+  if (input.customerId) {
+    await addCustomerSpend(input.customerId, input.totalAmount);
+  }
   return id;
 }
 
@@ -51,7 +70,8 @@ export async function updateSale(id: number, input: SaleWriteInput): Promise<voi
   await execute(
     `UPDATE sales
      SET product_id = ?, product_name = ?, category_id = ?, quantity = ?, unit_price = ?,
-         total_amount = ?, payment_method = ?, channel = ?, notes = ?, transaction_at = ?,
+         total_amount = ?, discount_amount = ?, shipping_fee = ?, payment_method = ?,
+         channel = ?, notes = ?, transaction_at = ?, customer_id = ?, customer_name = ?,
          updated_at = datetime('now')
      WHERE id = ?`,
     [
@@ -61,10 +81,14 @@ export async function updateSale(id: number, input: SaleWriteInput): Promise<voi
       input.quantity,
       input.unitPrice,
       input.totalAmount,
+      input.discountAmount ?? 0,
+      input.shippingFee ?? 0,
       input.paymentMethod,
       input.channel ?? null,
       input.notes ?? null,
       normalizeDate(input.transactionAt),
+      input.customerId ?? null,
+      input.customerName ?? null,
       id,
     ]
   );

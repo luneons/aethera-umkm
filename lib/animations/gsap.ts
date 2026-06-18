@@ -210,4 +210,67 @@ export function animateSidebarClose(el: HTMLElement | null): Promise<void> {
   });
 }
 
+/* ========================================================================== */
+/* PRICING CARDS (Premium page)                                                 */
+/* ========================================================================== */
+
+/** Stagger pricing cards in with a slight pop + scale. */
+export function animatePricingCards(container: HTMLElement | null): () => void {
+  if (!container || prefersReducedMotion()) return () => {};
+  const ctx = gsap.context(() => {
+    gsap.from(".price-card", {
+      y: 28,
+      opacity: 0,
+      scale: 0.94,
+      duration: 0.5,
+      stagger: 0.1,
+      ease: "back.out(1.5)",
+      clearProps: "all",
+    });
+  }, container);
+  return () => ctx.revert();
+}
+
+/** Press-down feedback for a pricing card (call on pointer down). */
+export function cardPressDown(el: HTMLElement | null): void {
+  if (!el || prefersReducedMotion()) return;
+  gsap.to(el, { scale: 0.96, duration: 0.12, ease: "power2.out" });
+}
+
+/** Release / select feedback for a pricing card. */
+export function cardPressUp(el: HTMLElement | null, selected: boolean): void {
+  if (!el || prefersReducedMotion()) return;
+  if (selected) {
+    gsap.timeline()
+      .to(el, { scale: 1.03, duration: 0.18, ease: "power2.out" })
+      .to(el, { scale: 1, duration: 0.3, ease: "elastic.out(1, 0.5)" });
+  } else {
+    gsap.to(el, { scale: 1, duration: 0.25, ease: "back.out(2)" });
+  }
+}
+
+/** Continuous subtle glow pulse for the highlighted (lifetime) card. */
+export function pulseGlow(el: HTMLElement | null): () => void {
+  if (!el || prefersReducedMotion()) return () => {};
+  const tween = gsap.to(el, {
+    boxShadow: "0 0 28px rgba(168,85,247,0.45)",
+    duration: 1.6,
+    repeat: -1,
+    yoyo: true,
+    ease: "sine.inOut",
+  });
+  return () => tween.kill();
+}
+
+/** Shine sweep across a CTA button, looped. */
+export function shineSweep(el: HTMLElement | null): () => void {
+  if (!el || prefersReducedMotion()) return () => {};
+  const tween = gsap.fromTo(
+    el,
+    { backgroundPositionX: "-200%" },
+    { backgroundPositionX: "200%", duration: 2.4, repeat: -1, ease: "none" }
+  );
+  return () => tween.kill();
+}
+
 export { gsap, ScrollTrigger };

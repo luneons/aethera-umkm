@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { FileDown, FileText, Trophy, BarChart3 } from "lucide-react";
-import { PageHeader } from "@/components/PageHeader";
+import { FileDown, FileText, Trophy, BarChart3 } from "lucide-react";import { PageHeader } from "@/components/PageHeader";
 import { PageTransition } from "@/components/PageTransition";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -32,6 +31,7 @@ import {
   getChannelBreakdown,
   getCOGS,
 } from "@/lib/db/queries/reports";
+import { getTopCustomers } from "@/lib/db/queries/customers";
 import { getSales } from "@/lib/db/queries/sales";
 import { getPurchases } from "@/lib/db/queries/purchases";
 import { exportReportPDF, exportReportCSV } from "@/lib/utils/export";
@@ -75,6 +75,7 @@ export default function LaporanPage() {
   const [pnl, setPnl] = useState<ProfitLossRow[]>([]);
   const [channels, setChannels] = useState<ChannelBreakdown[]>([]);
   const [cogs, setCogs] = useState(0);
+  const [topCustomers, setTopCustomers] = useState<{ customer_name: string; total: number; count: number }[]>([]);
   const [exporting, setExporting] = useState(false);
 
   function resolveRange(): { range: Range; label: string; prev?: Range } {
@@ -120,7 +121,8 @@ export default function LaporanPage() {
       getProfitLoss(range.from, range.to),
       getChannelBreakdown(range.from, range.to),
       getCOGS(range.from, range.to),
-    ]).then(([s, ps, tr, sc, bc, tp, pl, ch, cg]) => {
+      getTopCustomers(range.from, range.to, 5),
+    ]).then(([s, ps, tr, sc, bc, tp, pl, ch, cg, tc]) => {
       if (!active) return;
       setSummary(s);
       setPrevSummary(ps);
@@ -131,6 +133,7 @@ export default function LaporanPage() {
       setPnl(pl);
       setChannels(ch);
       setCogs(cg);
+      setTopCustomers(tc);
       setLoading(false);
     });
     return () => {
@@ -332,6 +335,31 @@ export default function LaporanPage() {
                     </div>
                     <span className="text-sm font-semibold text-[var(--color-success)]">
                       {formatRupiah(p.total_omset)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          )}
+
+          {/* Top customers */}
+          {topCustomers.filter((c) => c.customer_name !== "Umum").length > 0 && (
+            <Card>
+              <h2 className="mb-3 flex items-center gap-2 font-heading text-base font-bold">
+                <Trophy size={17} className="text-[var(--color-info)]" /> Pelanggan Terbaik
+              </h2>
+              <ul className="flex flex-col gap-2">
+                {topCustomers.filter((c) => c.customer_name !== "Umum").slice(0, 5).map((c, i) => (
+                  <li key={c.customer_name} className="flex items-center gap-3">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-[var(--color-bg-elevated)] text-xs font-bold text-[var(--color-info)]">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">{c.customer_name}</p>
+                      <p className="text-xs text-[var(--color-text-muted)]">{c.count}x transaksi</p>
+                    </div>
+                    <span className="text-sm font-semibold text-[var(--color-success)]">
+                      {formatRupiah(c.total)}
                     </span>
                   </li>
                 ))}

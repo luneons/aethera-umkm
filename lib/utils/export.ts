@@ -184,12 +184,16 @@ export interface ReceiptItem {
   name: string;
   qty: number;
   unitPrice: number;
+  discount?: number;
+  shippingFee?: number;
 }
 
 export interface ReceiptMeta {
   businessName: string;
   owner?: string | null;
+  logoBase64?: string | null;
   customerName?: string;
+  invoiceNumber?: string | null;
   note?: string;
   date?: Date;
 }
@@ -199,11 +203,21 @@ export function generateReceiptPDF(meta: ReceiptMeta, items: ReceiptItem[]) {
   const width = 226; // ~80mm in pt
   const lineH = 14;
   const itemRows = items.length;
-  const height = 180 + itemRows * lineH;
+  const height = 210 + itemRows * lineH * 2;
 
   const doc = new jsPDF({ unit: "pt", format: [width, height] });
   const m = 12;
   let y = 22;
+
+  // Logo
+  if (meta.logoBase64) {
+    try {
+      doc.addImage(meta.logoBase64, "AUTO", width / 2 - 20, y, 40, 40);
+      y += 48;
+    } catch {
+      // Ignore logo error
+    }
+  }
 
   doc.setFont("courier", "bold");
   doc.setFontSize(13);
@@ -217,18 +231,34 @@ export function generateReceiptPDF(meta: ReceiptMeta, items: ReceiptItem[]) {
   }
   doc.text(formatDateTime(meta.date ?? new Date()), width / 2, y, { align: "center" });
   y += 8;
+  if (meta.invoiceNumber) {
+    doc.text(`No: ${meta.invoiceNumber}`, width / 2, y, { align: "center" });
+    y += 11;
+  }
   doc.text("--------------------------------", width / 2, y, { align: "center" });
   y += 14;
 
-  let total = 0;
+  let subtotal = 0;
   doc.setFontSize(9);
   for (const it of items) {
-    const lineTotal = it.qty * it.unitPrice;
-    total += lineTotal;
+    const lineTotal = it.qty * it.unitPrice - (it.discount ?? 0);
+    subtotal += lineTotal;
     doc.text(it.name.slice(0, 28), m, y);
     y += 11;
     doc.text(`${it.qty} x ${formatRupiah(it.unitPrice, false)}`, m, y);
+    if (it.discount && it.discount > 0) {
+      doc.text(`-${formatRupiah(it.discount, false)}`, m + 120, y);
+    }
     doc.text(formatRupiah(lineTotal, false), width - m, y, { align: "right" });
+    y += 13;
+  }
+
+  const shippingFee = items.reduce((s, i) => s + (i.shippingFee ?? 0), 0);
+  if (shippingFee > 0) {
+    doc.text("--------------------------------", width / 2, y, { align: "center" });
+    y += 11;
+    doc.text("Ongkir", m, y);
+    doc.text(formatRupiah(shippingFee, false), width - m, y, { align: "right" });
     y += 13;
   }
 
@@ -237,7 +267,7 @@ export function generateReceiptPDF(meta: ReceiptMeta, items: ReceiptItem[]) {
   doc.setFont("courier", "bold");
   doc.setFontSize(11);
   doc.text("TOTAL", m, y);
-  doc.text(formatRupiah(total), width - m, y, { align: "right" });
+  doc.text(formatRupiah(subtotal + shippingFee), width - m, y, { align: "right" });
   y += 18;
 
   doc.setFont("courier", "normal");

@@ -168,10 +168,22 @@ export async function execute(
 
 /** Replace the entire database from an exported byte array (restore). */
 export async function importDatabase(data: Uint8Array): Promise<void> {
+  // Validate SQLite magic bytes: first 16 bytes must be "SQLite format 3\000"
+  const MAGIC = [83,81,76,105,116,101,32,102,111,114,109,97,116,32,51,0];
+  if (data.length < 512) throw new Error("File backup tidak valid: terlalu kecil");
+  for (let i = 0; i < MAGIC.length; i++) {
+    if (data[i] !== MAGIC[i]) throw new Error("File backup tidak valid: bukan file SQLite");
+  }
+
   const sql = await getSqlJs();
   // Validate by attempting to open and read a known table.
   const candidate = new sql.Database(data);
-  candidate.exec("SELECT count(*) FROM sqlite_master");
+  try {
+    candidate.exec("SELECT count(*) FROM sqlite_master");
+  } catch {
+    candidate.close();
+    throw new Error("File backup tidak valid: tidak dapat dibaca");
+  }
   if (db) db.close();
   db = candidate;
   runMigrations(db);

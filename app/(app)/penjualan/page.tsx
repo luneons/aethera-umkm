@@ -93,10 +93,13 @@ export default function PenjualanPage() {
       {
         businessName: prof?.name ?? "Usaha Saya",
         owner: prof?.owner,
+        logoBase64: (prof as { logo_base64?: string | null })?.logo_base64,
         date: fromSqlDateTime(s.transaction_at),
+        customerName: s.customer_name ?? undefined,
+        invoiceNumber: s.invoice_number ?? undefined,
         note: s.notes ?? undefined,
       },
-      [{ name: s.product_name, qty: s.quantity, unitPrice: s.unit_price }]
+      [{ name: s.product_name, qty: s.quantity, unitPrice: s.unit_price, discount: s.discount_amount }]
     );
     toast.success("Struk dibuat");
   };

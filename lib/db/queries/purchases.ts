@@ -10,11 +10,15 @@ export interface PurchaseWriteInput {
   quantity: number;
   unitPrice: number;
   totalAmount: number;
+  discountAmount?: number;
+  shippingFee?: number;
   supplier?: string | null;
+  supplierId?: number | null;
   paymentMethod: PaymentMethod;
   channel?: string | null;
   notes?: string | null;
   transactionAt: Date | string;
+  invoiceNumber?: string | null;
 }
 
 function normalizeDate(value: Date | string): string {
@@ -24,8 +28,10 @@ function normalizeDate(value: Date | string): string {
 export async function createPurchase(input: PurchaseWriteInput): Promise<number> {
   const id = await execute(
     `INSERT INTO purchases
-       (product_id, item_name, category_id, quantity, unit_price, total_amount, supplier, payment_method, channel, notes, transaction_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+       (product_id, item_name, category_id, quantity, unit_price, total_amount,
+        discount_amount, shipping_fee, supplier, supplier_id, payment_method, channel, notes,
+        transaction_at, invoice_number)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       input.productId,
       input.itemName,
@@ -33,15 +39,21 @@ export async function createPurchase(input: PurchaseWriteInput): Promise<number>
       input.quantity,
       input.unitPrice,
       input.totalAmount,
+      input.discountAmount ?? 0,
+      input.shippingFee ?? 0,
       input.supplier ?? null,
+      input.supplierId ?? null,
       input.paymentMethod,
       input.channel ?? null,
       input.notes ?? null,
       normalizeDate(input.transactionAt),
+      input.invoiceNumber ?? null,
     ]
   );
   // Increase stock on purchase/restock.
-  if (input.productId) await adjustStock(input.productId, Math.abs(input.quantity));
+  if (input.productId) {
+    await adjustStock(input.productId, Math.abs(input.quantity), "pembelian", id);
+  }
   return id;
 }
 
@@ -49,7 +61,8 @@ export async function updatePurchase(id: number, input: PurchaseWriteInput): Pro
   await execute(
     `UPDATE purchases
      SET product_id = ?, item_name = ?, category_id = ?, quantity = ?, unit_price = ?,
-         total_amount = ?, supplier = ?, payment_method = ?, channel = ?, notes = ?, transaction_at = ?,
+         total_amount = ?, discount_amount = ?, shipping_fee = ?, supplier = ?, supplier_id = ?,
+         payment_method = ?, channel = ?, notes = ?, transaction_at = ?,
          updated_at = datetime('now')
      WHERE id = ?`,
     [
@@ -59,7 +72,10 @@ export async function updatePurchase(id: number, input: PurchaseWriteInput): Pro
       input.quantity,
       input.unitPrice,
       input.totalAmount,
+      input.discountAmount ?? 0,
+      input.shippingFee ?? 0,
       input.supplier ?? null,
+      input.supplierId ?? null,
       input.paymentMethod,
       input.channel ?? null,
       input.notes ?? null,
