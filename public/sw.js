@@ -1,9 +1,11 @@
 /* AETHERA UMKM — Service Worker (offline-first app shell) */
-const CACHE = "aethera-v2";
+const CACHE = "aethera-v3";
 const PRECACHE = [
   "/",
   "/manifest.json",
   "/icons/icon.svg",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
   "/sql-wasm/sql-wasm.wasm",
   "/sql-wasm/sql-wasm.js",
 ];

@@ -31,10 +31,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [ready, refreshPremium]);
 
   useEffect(() => {
-    // Register the service worker for PWA/offline support.
-    if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
-      navigator.serviceWorker.register("/sw.js").catch(() => {});
-    }
+    // Service worker is registered via an inline script in app/layout.tsx
+    // head so PWA crawlers detect it reliably. Nothing to do here.
   }, []);
 
   // Start the daily reminder notification checker.

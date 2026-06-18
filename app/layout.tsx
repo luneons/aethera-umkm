@@ -56,6 +56,21 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" data-theme="dark" suppressHydrationWarning>
+      <head>
+        {/* Register service worker as early as possible so PWA crawlers
+            (PWABuilder, Lighthouse) reliably detect it. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function () {
+                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
+                });
+              }
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${jakarta.variable} antialiased`} suppressHydrationWarning>
         <Providers>{children}</Providers>
       </body>
