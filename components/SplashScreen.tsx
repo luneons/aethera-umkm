@@ -32,11 +32,12 @@ export function SplashScreen({ onDone }: { onDone: () => void }) {
   return (
     <div
       ref={rootRef}
+      suppressHydrationWarning
       className="fixed inset-0 z-[300] grid place-items-center bg-[var(--color-bg-primary)]"
     >
-      <div ref={logoRef} className="flex flex-col items-center gap-4">
+      <div ref={logoRef} suppressHydrationWarning className="flex flex-col items-center gap-4">
         <Logo size={64} />
-        <div className="text-center">
+        <div suppressHydrationWarning className="text-center">
           <p className="font-heading text-2xl font-extrabold tracking-tight">AETHERA</p>
           <p className="text-sm tracking-[0.3em] text-[var(--color-accent-gold)]">UMKM</p>
         </div>

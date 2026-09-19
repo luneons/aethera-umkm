@@ -36,7 +36,7 @@ function ToastItem({ toast }: { toast: Toast }) {
 export function Toaster() {
   const toasts = useToastStore((s) => s.toasts);
   return (
-    <div className="pointer-events-none fixed bottom-24 right-4 z-[200] flex flex-col gap-2 sm:bottom-6">
+    <div suppressHydrationWarning className="pointer-events-none fixed bottom-24 right-4 z-[200] flex flex-col gap-2 sm:bottom-6">
       {toasts.map((t) => (
         <ToastItem key={t.id} toast={t} />
       ))}
