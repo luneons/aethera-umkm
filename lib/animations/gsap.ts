@@ -252,25 +252,33 @@ export function cardPressUp(el: HTMLElement | null, selected: boolean): void {
 /** Continuous subtle glow pulse for the highlighted (lifetime) card. */
 export function pulseGlow(el: HTMLElement | null): () => void {
   if (!el || prefersReducedMotion()) return () => {};
-  const tween = gsap.to(el, {
-    boxShadow: "0 0 28px rgba(168,85,247,0.45)",
-    duration: 1.6,
-    repeat: -1,
-    yoyo: true,
-    ease: "sine.inOut",
-  });
-  return () => tween.kill();
+  try {
+    const tween = gsap.to(el, {
+      boxShadow: "0 0 28px rgba(168,85,247,0.45)",
+      duration: 1.6,
+      repeat: -1,
+      yoyo: true,
+      ease: "sine.inOut",
+    });
+    return () => tween.kill();
+  } catch {
+    return () => {};
+  }
 }
 
 /** Shine sweep across a CTA button, looped. */
 export function shineSweep(el: HTMLElement | null): () => void {
   if (!el || prefersReducedMotion()) return () => {};
-  const tween = gsap.fromTo(
-    el,
-    { backgroundPositionX: "-200%" },
-    { backgroundPositionX: "200%", duration: 2.4, repeat: -1, ease: "none" }
-  );
-  return () => tween.kill();
+  try {
+    const tween = gsap.fromTo(
+      el,
+      { backgroundPositionX: "-200%" },
+      { backgroundPositionX: "200%", duration: 2.4, repeat: -1, ease: "none" }
+    );
+    return () => tween.kill();
+  } catch {
+    return () => {};
+  }
 }
 
 export { gsap, ScrollTrigger };

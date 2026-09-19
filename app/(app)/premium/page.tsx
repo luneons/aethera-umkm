@@ -171,9 +171,14 @@ export default function PremiumPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Load this device's ID — synchronous from localStorage, available immediately
+  // Load this device's ID — localStorage, hanya tersedia di browser
   useEffect(() => {
-    setDeviceId(getDeviceId());
+    try {
+      setDeviceId(getDeviceId());
+    } catch {
+      // localStorage tidak tersedia (private mode extreme, dll)
+      setDeviceId("N/A");
+    }
   }, []);
 
   const copyDevice = () => {
@@ -186,16 +191,24 @@ export default function PremiumPage() {
   // Animate pricing cards in on mount (only when not active)
   useEffect(() => {
     if (active) return;
-    const cleanup = animatePricingCards(cardsWrapRef.current);
-    return cleanup;
+    try {
+      const cleanup = animatePricingCards(cardsWrapRef.current);
+      return cleanup;
+    } catch {
+      return undefined;
+    }
   }, [active]);
 
   // Continuous glow on lifetime card + shine sweep on CTA
   useEffect(() => {
     if (active) return;
-    const stopGlow = pulseGlow(lifetimeRef.current);
-    const stopShine = shineSweep(ctaRef.current);
-    return () => { stopGlow(); stopShine(); };
+    try {
+      const stopGlow = pulseGlow(lifetimeRef.current);
+      const stopShine = shineSweep(ctaRef.current);
+      return () => { stopGlow(); stopShine(); };
+    } catch {
+      return undefined;
+    }
   }, [active]);
 
   const selectPlan = (plan: "bulanan" | "tahunan" | "lifetime", el: HTMLButtonElement | null) => {
