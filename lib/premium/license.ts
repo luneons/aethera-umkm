@@ -222,9 +222,14 @@ export async function activateLicense(key: string): Promise<LicenseStatus> {
 }
 
 export async function getStoredLicense(): Promise<LicenseStatus> {
-  const key = await getSetting(LICENSE_SETTING);
-  if (!key) return { active: false, payload: null };
-  return validateLicense(key);
+  try {
+    const key = await getSetting(LICENSE_SETTING);
+    if (!key) return { active: false, payload: null };
+    return validateLicense(key);
+  } catch {
+    // Non-fatal — treat as no license
+    return { active: false, payload: null };
+  }
 }
 
 export async function removeLicense(): Promise<void> {

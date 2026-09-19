@@ -168,6 +168,7 @@ export default function PremiumPage() {
 
   const [deviceId, setDeviceId] = useState("");
   const [deviceCopied, setDeviceCopied] = useState(false);
+  const [activationError, setActivationError] = useState<string | null>(null);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -214,12 +215,27 @@ export default function PremiumPage() {
 
   const handleActivate = async () => {
     if (!key.trim()) { toast.error("Masukkan license key"); return; }
+    setActivationError(null);
     setBusy(true);
     try {
       const status = await activateLicense(key);
-      if (status.active) { await refresh(); toast.success("Premium aktif! Terima kasih 🎉"); setKey(""); }
-      else toast.error(status.reason ?? "License tidak valid");
-    } finally { setBusy(false); }
+      if (status.active) {
+        await refresh();
+        toast.success("Premium aktif! Terima kasih 🎉");
+        setKey("");
+      } else {
+        const reason = status.reason ?? "License tidak valid";
+        // Tampilkan inline di halaman — lebih reliable daripada toast saja
+        setActivationError(reason);
+        toast.error(reason);
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Terjadi kesalahan saat aktivasi.";
+      setActivationError(msg);
+      toast.error(msg);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const handleRemove = async () => {
@@ -567,8 +583,30 @@ export default function PremiumPage() {
 
           <div className="flex flex-col gap-2">
             <Field label="">
-              <Input value={key} onChange={(e) => setKey(e.target.value)} placeholder="xxxxx.xxxxx" />
+              <Input
+                value={key}
+                onChange={(e) => { setKey(e.target.value); setActivationError(null); }}
+                placeholder="xxxxx.xxxxx"
+              />
             </Field>
+
+            {/* Pesan error aktivasi — ditampilkan inline, tidak bergantung pada toast */}
+            {activationError && (
+              <div className="rounded-xl border border-[var(--color-danger)]/40 bg-[var(--color-danger)]/10 px-4 py-3">
+                <p className="text-sm font-semibold text-[var(--color-danger)]">❌ Aktivasi Gagal</p>
+                <p className="mt-1 text-xs text-[var(--color-danger)]/80">{activationError}</p>
+                {activationError.includes("perangkat lain") && deviceId && (
+                  <div className="mt-2 rounded-lg bg-[var(--color-bg-card)] px-3 py-2">
+                    <p className="text-[11px] text-[var(--color-text-muted)]">Device ID kamu saat ini:</p>
+                    <code className="text-xs font-bold text-[var(--color-accent-gold)]">{deviceId}</code>
+                    <p className="mt-1 text-[11px] text-[var(--color-text-muted)]">
+                      Kirim ID ini ke admin untuk re-binding license ke perangkat baru.
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <Button loading={busy} onClick={handleActivate}>
               <Crown size={16} /> Aktifkan Premium
             </Button>
