@@ -196,6 +196,27 @@ export async function activateLicense(key: string): Promise<LicenseStatus> {
   const status = await validateLicense(key);
   if (status.active) {
     await setSetting(LICENSE_SETTING, key.trim().slice(0, MAX_KEY_LENGTH));
+
+    // Report activation to server for monitoring (best-effort, non-blocking)
+    try {
+      const payload = status.payload!;
+      const exp = payload.exp
+        ? new Date(payload.exp).toISOString()
+        : "Lifetime";
+      fetch("/api/license/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key: key.trim().slice(0, 64),   // truncate for privacy
+          name: payload.name,
+          deviceId: getDeviceId(),
+          plan: payload.plan,
+          expiry: exp,
+        }),
+      }).catch(() => {}); // fire-and-forget
+    } catch {
+      // non-critical
+    }
   }
   return status;
 }

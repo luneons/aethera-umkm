@@ -117,6 +117,7 @@ function AdminLogin({ onAuth }: { onAuth: () => void }) {
 export default function AdminLicensePage() {
   const [authed, setAuthed]     = useState(false);
   const [checking, setChecking] = useState(true);
+  const [tab, setTab]           = useState<"generate" | "monitor">("generate");
   const [name, setName]         = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [planIdx, setPlan]      = useState(1);
@@ -126,10 +127,43 @@ export default function AdminLicensePage() {
   const [verifyResult, setVResult] = useState<string | null>(null);
   const [history, setHistory]   = useState<{ name: string; plan: string; key: string; exp: string; device: string; generated: string }[]>([]);
 
+  // Monitor tab state
+  const [activations, setActivations] = useState<{
+    key: string; name: string; deviceId: string; ip: string;
+    plan: string; expiry: string; activatedAt: string; userAgent: string;
+  }[]>([]);
+  const [monitorTotal, setMonitorTotal] = useState(0);
+  const [monitorLoading, setMonitorLoading] = useState(false);
+  const [monitorError, setMonitorError] = useState("");
+
   useEffect(() => {
     setAuthed(sessionStorage.getItem(SESSION_KEY) === "1");
     setChecking(false);
   }, []);
+
+  // Load activations when switching to monitor tab
+  useEffect(() => {
+    if (tab !== "monitor" || !authed) return;
+    fetchActivations();
+  }, [tab, authed]);
+
+  const fetchActivations = async () => {
+    setMonitorLoading(true);
+    setMonitorError("");
+    try {
+      const res = await fetch("/api/license/list", {
+        headers: { Authorization: `Bearer ${ADMIN_PASSWORD}` },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json() as { activations: typeof activations; total: number };
+      setActivations(data.activations || []);
+      setMonitorTotal(data.total || 0);
+    } catch (e) {
+      setMonitorError(`Gagal memuat: ${e instanceof Error ? e.message : "Unknown error"}. Pastikan Upstash KV sudah terkoneksi di Vercel.`);
+    } finally {
+      setMonitorLoading(false);
+    }
+  };
 
   const handleGenerate = async () => {
     const cleanName = name.trim().slice(0, MAX_NAME_LENGTH);
@@ -209,14 +243,32 @@ export default function AdminLicensePage() {
   return (
     <div style={{ fontFamily: "system-ui, sans-serif", maxWidth: 640, margin: "0 auto", padding: "24px 16px", color: "#f0f2f8" }}>
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 24 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 20 }}>
         <div>
-          <h1 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>👑 AETHERA — License Generator</h1>
+          <h1 style={{ fontSize: 20, fontWeight: 800, margin: "0 0 4px" }}>👑 AETHERA — Admin Panel</h1>
           <p style={{ fontSize: 13, color: "#9ba3b8", margin: 0 }}>Halaman admin — jangan share URL ini</p>
         </div>
         <button onClick={logout} style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #2a2d38", background: "transparent", color: "#9ba3b8", fontSize: 12, cursor: "pointer" }}>
           Logout
         </button>
+      </div>
+
+      {/* Tabs */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+        {(["generate", "monitor"] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            style={{
+              flex: 1, padding: "10px", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", border: "2px solid",
+              borderColor: tab === t ? "#f5a623" : "#2a2d38",
+              background: tab === t ? "rgba(245,166,35,0.1)" : "#13151b",
+              color: tab === t ? "#f5a623" : "#9ba3b8",
+            }}
+          >
+            {t === "generate" ? "🔑 Generate Key" : "📊 Monitor Aktivasi"}
+          </button>
+        ))}
       </div>
 
       {/* Generate form */}
@@ -316,6 +368,7 @@ export default function AdminLicensePage() {
       )}
 
       {/* Verify */}
+      {tab === "generate" && (
       <div style={{ background: "#1a1d24", borderRadius: 16, padding: 20, marginBottom: 16, border: "1px solid #2a2d38" }}>
         <h2 style={{ fontSize: 15, fontWeight: 700, marginTop: 0, marginBottom: 8 }}>Verifikasi Key</h2>
         <input value={verifyKey} onChange={(e) => setVerify(e.target.value)} placeholder="Paste license key..." style={{ width: "100%", padding: "10px 12px", borderRadius: 10, border: "1px solid #2a2d38", background: "#13151b", color: "#f0f2f8", fontSize: 13, boxSizing: "border-box", marginBottom: 8 }} />
@@ -328,6 +381,84 @@ export default function AdminLicensePage() {
           </p>
         )}
       </div>
+      )}
+
+      {/* Monitor Tab */}
+      {tab === "monitor" && (
+        <div>
+          {/* Stats header */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: 15 }}>Total Aktivasi: <span style={{ color: "#f5a623" }}>{monitorTotal}</span></p>
+              <p style={{ margin: "2px 0 0", fontSize: 12, color: "#6b7280" }}>Diperbarui setiap kali tab dibuka</p>
+            </div>
+            <button onClick={fetchActivations} disabled={monitorLoading} style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid #2a2d38", background: "#2a2d38", color: "#f0f2f8", fontSize: 12, cursor: "pointer" }}>
+              {monitorLoading ? "..." : "↻ Refresh"}
+            </button>
+          </div>
+
+          {monitorError && (
+            <div style={{ background: "rgba(244,67,54,0.1)", border: "1px solid rgba(244,67,54,0.3)", borderRadius: 10, padding: "12px 14px", marginBottom: 14, fontSize: 13, color: "#f44336" }}>
+              ⚠️ {monitorError}
+            </div>
+          )}
+
+          {monitorLoading ? (
+            <div style={{ textAlign: "center", padding: 40, color: "#6b7280", fontSize: 14 }}>Memuat data...</div>
+          ) : activations.length === 0 && !monitorError ? (
+            <div style={{ textAlign: "center", padding: 40, color: "#6b7280", fontSize: 14 }}>
+              Belum ada aktivasi tercatat.<br/>
+              <span style={{ fontSize: 12 }}>Data akan muncul setelah ada user yang aktifkan license.</span>
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {activations.map((a, i) => {
+                const isExpired = a.expiry !== "Lifetime" && new Date(a.expiry) < new Date();
+                return (
+                  <div key={i} style={{ background: "#1a1d24", borderRadius: 12, padding: "14px 16px", border: `1px solid ${isExpired ? "rgba(244,67,54,0.3)" : "#2a2d38"}` }}>
+                    {/* Row 1: Nama + badge */}
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: 8 }}>
+                      <div>
+                        <p style={{ margin: 0, fontWeight: 700, fontSize: 14 }}>{a.name}</p>
+                        <p style={{ margin: "2px 0 0", fontSize: 11, color: "#6b7280" }}>
+                          Aktivasi: {new Date(a.activatedAt).toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                      <span style={{
+                        padding: "3px 8px", borderRadius: 20, fontSize: 10, fontWeight: 700,
+                        background: isExpired ? "rgba(244,67,54,0.15)" : a.expiry === "Lifetime" ? "rgba(168,85,247,0.15)" : "rgba(76,175,80,0.15)",
+                        color: isExpired ? "#f44336" : a.expiry === "Lifetime" ? "#c084fc" : "#4caf50",
+                      }}>
+                        {isExpired ? "EXPIRED" : a.expiry === "Lifetime" ? "LIFETIME" : a.plan.toUpperCase()}
+                      </span>
+                    </div>
+
+                    {/* Row 2: Detail info */}
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "4px 12px", fontSize: 12 }}>
+                      <div>
+                        <span style={{ color: "#6b7280" }}>📱 Device ID: </span>
+                        <code style={{ color: "#f5a623", fontSize: 11 }}>{a.deviceId}</code>
+                      </div>
+                      <div>
+                        <span style={{ color: "#6b7280" }}>🌐 IP: </span>
+                        <code style={{ color: "#9ba3b8", fontSize: 11 }}>{a.ip}</code>
+                      </div>
+                      <div>
+                        <span style={{ color: "#6b7280" }}>📅 Berlaku: </span>
+                        <span style={{ color: "#9ba3b8" }}>{a.expiry === "Lifetime" ? "Selamanya" : new Date(a.expiry).toLocaleDateString("id-ID")}</span>
+                      </div>
+                      <div style={{ gridColumn: "1 / -1" }}>
+                        <span style={{ color: "#6b7280" }}>💻 UA: </span>
+                        <span style={{ color: "#6b7280", fontSize: 10 }}>{a.userAgent.slice(0, 60)}...</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Alur */}
       <div style={{ padding: 16, borderRadius: 12, background: "rgba(245,166,35,0.05)", border: "1px solid rgba(245,166,35,0.2)", marginBottom: 16 }}>
