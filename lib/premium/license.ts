@@ -176,7 +176,7 @@ export async function validateLicense(rawKey: string): Promise<LicenseStatus> {
 
     // Device binding check — if the key is bound, it must match THIS device
     if (typed.device) {
-      const myDevice = await getDeviceId();
+      const myDevice = getDeviceId();
       if (typed.device !== myDevice) {
         return {
           active: false,

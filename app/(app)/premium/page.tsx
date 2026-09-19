@@ -171,9 +171,9 @@ export default function PremiumPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Load this device's ID for binding
+  // Load this device's ID — synchronous from localStorage, available immediately
   useEffect(() => {
-    getDeviceId().then(setDeviceId);
+    setDeviceId(getDeviceId());
   }, []);
 
   const copyDevice = () => {
@@ -221,7 +221,7 @@ export default function PremiumPage() {
     setBusy(true);
     try {
       const profile = await getBusinessProfile();
-      const dev = await getDeviceId();
+      const dev = getDeviceId();
       const trialKey = await generateLicense({ name: profile?.name ?? "Trial", plan: "premium", exp: Date.now() + 30 * 24 * 60 * 60 * 1000, device: dev });
       const status = await activateLicense(trialKey);
       if (status.active) { await refresh(); toast.success("Trial Premium 30 hari aktif!"); }

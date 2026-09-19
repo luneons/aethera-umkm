@@ -1,24 +1,20 @@
 "use client";
 
-import { getSetting, setSetting } from "@/lib/db/queries/settings";
-
 /**
  * Device identity for license binding.
  *
- * Each device generates a random, persistent Device ID on first access.
- * A license key can be bound to a specific Device ID so that sharing the key
- * to another device will fail validation.
+ * Stored in localStorage (not SQLite) so it's available immediately —
+ * no need to wait for the async SQLite/WASM database to initialise.
  *
- * The ID is stored in app_settings (inside the SQLite DB persisted to IndexedDB).
- * It is NOT a hardware fingerprint — it's a random value, so it survives across
- * sessions but resets if the user clears site data / reinstalls. That tradeoff
- * is acceptable for a UMKM app (re-binding handled via WA support).
+ * The ID is random and persistent across sessions, but resets if the user
+ * clears site data or uses a different browser profile.
+ * That tradeoff is fine for a UMKM app (re-binding via WA support).
  */
 
-const DEVICE_ID_SETTING = "device_id";
+const DEVICE_ID_KEY = "aethera_device_id";
 
-/** Short, human-friendly random ID, e.g. "A7K2-9XQm-3FpL". */
-function randomDeviceId(): string {
+/** Short, human-readable random ID, e.g. "A7K-2Xq-9Fp". */
+function generateId(): string {
   const bytes = new Uint8Array(9);
   crypto.getRandomValues(bytes);
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789";
@@ -30,12 +26,16 @@ function randomDeviceId(): string {
   return out;
 }
 
-/** Get (or lazily create) this device's persistent ID. */
-export async function getDeviceId(): Promise<string> {
-  let id = await getSetting(DEVICE_ID_SETTING);
+/**
+ * Get (or lazily create) this device's persistent ID.
+ * Synchronous — safe to call anywhere on the client.
+ */
+export function getDeviceId(): string {
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem(DEVICE_ID_KEY);
   if (!id) {
-    id = randomDeviceId();
-    await setSetting(DEVICE_ID_SETTING, id);
+    id = generateId();
+    localStorage.setItem(DEVICE_ID_KEY, id);
   }
   return id;
 }
