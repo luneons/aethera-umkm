@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Plus_Jakarta_Sans } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 
@@ -56,23 +57,21 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id" data-theme="dark" suppressHydrationWarning>
-      <head>
-        {/* Register service worker as early as possible so PWA crawlers
-            (PWABuilder, Lighthouse) reliably detect it. */}
-        <script
+      <body className={`${inter.variable} ${jakarta.variable} antialiased`} suppressHydrationWarning>
+        <Providers>{children}</Providers>
+        {/* Register service worker via next/script (afterInteractive)
+            so PWA crawlers reliably detect it without breaking hydration. */}
+        <Script
+          id="sw-register"
+          strategy="afterInteractive"
           dangerouslySetInnerHTML={{
             __html: `
               if ('serviceWorker' in navigator) {
-                window.addEventListener('load', function () {
-                  navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
-                });
+                navigator.serviceWorker.register('/sw.js', { scope: '/' }).catch(function(){});
               }
             `,
           }}
         />
-      </head>
-      <body className={`${inter.variable} ${jakarta.variable} antialiased`} suppressHydrationWarning>
-        <Providers>{children}</Providers>
       </body>
     </html>
   );
