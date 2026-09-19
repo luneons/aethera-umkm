@@ -171,14 +171,10 @@ export default function PremiumPage() {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  // Load this device's ID — localStorage, hanya tersedia di browser
+  // Load this device's ID — dari localStorage, hanya jalan di browser
   useEffect(() => {
-    try {
-      setDeviceId(getDeviceId());
-    } catch {
-      // localStorage tidak tersedia (private mode extreme, dll)
-      setDeviceId("N/A");
-    }
+    const id = getDeviceId();
+    if (id) setDeviceId(id);
   }, []);
 
   const copyDevice = () => {
