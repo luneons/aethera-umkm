@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { recordActivation } from "@/lib/redis";
+import { getActivationByKey, recordActivation } from "@/lib/redis";
+import { verifyServerLicense } from "@/lib/server/license";
 
 export const runtime = "edge";
 
@@ -7,14 +8,26 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json() as {
       key?: string;
-      name?: string;
       deviceId?: string;
-      plan?: string;
-      expiry?: string;
     };
 
-    if (!body.key || !body.name) {
-      return NextResponse.json({ error: "key and name required" }, { status: 400 });
+    if (!body.key) {
+      return NextResponse.json({ error: "key wajib diisi" }, { status: 400 });
+    }
+
+    const license = await verifyServerLicense(body.key);
+    if (!license.active || !license.payload) {
+      return NextResponse.json(
+        { ok: false, error: license.reason ?? "Lisensi tidak valid" },
+        { status: 400 }
+      );
+    }
+
+    if (license.payload.device && license.payload.device !== (body.deviceId || "")) {
+      return NextResponse.json(
+        { ok: false, error: "Lisensi ini terdaftar untuk perangkat lain." },
+        { status: 409 }
+      );
     }
 
     // Extract client IP from headers (Vercel sets x-forwarded-for)
@@ -25,13 +38,21 @@ export async function POST(req: NextRequest) {
 
     const userAgent = req.headers.get("user-agent") || "unknown";
 
+    const existing = await getActivationByKey(body.key);
+    if (existing && existing.deviceId !== (body.deviceId || "unknown")) {
+      return NextResponse.json(
+        { ok: false, error: "Lisensi ini sudah digunakan pada perangkat lain." },
+        { status: 409 }
+      );
+    }
+
     await recordActivation({
       key:         body.key,
-      name:        body.name,
+      name:        license.payload.name,
       deviceId:    body.deviceId || "unknown",
       ip,
-      plan:        body.plan || "unknown",
-      expiry:      body.expiry || "unknown",
+      plan:        license.payload.plan,
+      expiry:      license.payload.exp ? new Date(license.payload.exp).toISOString() : "Lifetime",
       activatedAt: new Date().toISOString(),
       userAgent,
     });
@@ -39,7 +60,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error("[license/activate]", err);
-    // Return 200 even on error so client doesn't see a failed activation
-    return NextResponse.json({ ok: false });
+    // Monitoring is best-effort; activation itself must not crash the client.
+    return NextResponse.json({ ok: false, error: "Monitoring aktivasi tidak tersedia" });
   }
 }

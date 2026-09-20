@@ -27,7 +27,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // Load premium license status.
   useEffect(() => {
     if (!ready) return;
-    refreshPremium();
+    refreshPremium().catch((err) => {
+      console.error("[premium] gagal memuat status lisensi", err);
+    });
   }, [ready, refreshPremium]);
 
   useEffect(() => {

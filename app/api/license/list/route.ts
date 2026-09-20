@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAllActivations, getActivationCount } from "@/lib/redis";
+import { isAdminRequest } from "@/lib/server/adminAuth";
 
 export const runtime = "edge";
 
-const ADMIN_PASSWORD = process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "aethera-admin-2026";
-
 export async function GET(req: NextRequest) {
-  // Require admin token in Authorization header
-  const auth = req.headers.get("authorization");
-  if (!auth || auth !== `Bearer ${ADMIN_PASSWORD}`) {
+  void req;
+  if (!(await isAdminRequest())) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

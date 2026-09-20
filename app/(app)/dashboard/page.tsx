@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   TrendingUp,
   TrendingDown,
@@ -12,6 +13,7 @@ import {
   Receipt,
   Share2,
   AlertTriangle,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -51,9 +53,20 @@ export default function DashboardPage() {
   const [dailyTarget, setDailyTarget] = useState<Target | null>(null);
   const [monthlyTarget, setMonthlyTarget] = useState<Target | null>(null);
   const [lowStock, setLowStock] = useState<Product[]>([]);
+  const [showPromo, setShowPromo] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const promoSeen = sessionStorage.getItem("aethera_promo_50_seen");
+    if (!promoSeen) setShowPromo(true);
+  }, []);
+
+  const closePromo = () => {
+    sessionStorage.setItem("aethera_promo_50_seen", "1");
+    setShowPromo(false);
+  };
 
   useEffect(() => {
     let active = true;
@@ -130,6 +143,43 @@ export default function DashboardPage() {
 
   return (
     <div ref={containerRef} className="flex flex-col gap-5">
+      {showPromo && (
+        <div
+          className="fixed inset-0 z-[250] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="BIG PROMO AETHERA Premium 50%"
+          onClick={closePromo}
+        >
+          <div
+            className="relative w-full max-w-md overflow-hidden rounded-3xl border border-white/15 bg-[var(--color-bg-card)] shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={closePromo}
+              aria-label="Tutup promo"
+              className="absolute right-3 top-3 z-10 grid h-9 w-9 place-items-center rounded-full bg-black/70 text-white transition hover:bg-black"
+            >
+              <X size={18} />
+            </button>
+            <Link href="/premium" onClick={closePromo} aria-label="Lihat dan beli paket AETHERA Premium">
+              <Image
+                src="/promoaethera.png"
+                alt="BIG PROMO AETHERA Premium diskon 50%"
+                width={1080}
+                height={1350}
+                priority
+                className="h-auto w-full cursor-pointer object-contain"
+              />
+              <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-3 text-center text-sm font-extrabold text-black">
+                Ambil Promo Sekarang →
+              </div>
+            </Link>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="flex items-center justify-between">
         <div>

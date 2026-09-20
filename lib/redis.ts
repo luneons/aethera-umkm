@@ -37,10 +37,26 @@ export interface LicenseActivation {
 const KEY_PREFIX = "activation:";
 const INDEX_KEY = "activations_index"; // sorted set: score=timestamp, member=key
 
+function activationHashKey(key: string): string {
+  const signature = key.includes(".") ? key.slice(key.lastIndexOf(".") + 1) : key;
+  return `${KEY_PREFIX}${signature.slice(0, 64)}`;
+}
+
+/** Find the activation record for a license key, if it exists. */
+export async function getActivationByKey(key: string): Promise<LicenseActivation | null> {
+  const data = await redis.hgetall<LicenseActivation>(activationHashKey(key));
+  if (data?.key === key) return data;
+
+  // Backward compatibility for records created before signature-based IDs.
+  const legacy = await redis.hgetall<LicenseActivation>(`${KEY_PREFIX}${key.slice(0, 32)}`);
+  if (legacy && (legacy.key === key || legacy.key === key.slice(0, 64))) return legacy;
+  return null;
+}
+
 /** Record a new license activation (or update existing). */
 export async function recordActivation(data: LicenseActivation): Promise<void> {
   // Store activation detail as hash
-  const hashKey = `${KEY_PREFIX}${data.key.slice(0, 32)}`;
+  const hashKey = activationHashKey(data.key);
   await redis.hset(hashKey, {
     key:         data.key,
     name:        data.name,

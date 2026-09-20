@@ -3,34 +3,26 @@
 /**
  * Admin License Generator — /admin-license
  *
- * Protected by a local admin password (stored in env or hardcoded).
- * Session is kept in sessionStorage only (cleared on tab close).
+ * Protected by server-side authentication with an HttpOnly session cookie.
  *
  * Security notes:
- * - Password check is client-side only (same bundle). For production, move to a server route.
- * - History is session-only (never persisted).
+ * - Password and license signing secret never enter the browser bundle.
+ * - License generation is performed by a protected server endpoint.
+ * - History is client session-only (never persisted).
  * - All inputs are sanitised before embedding in generated messages.
  */
 
 import { useEffect, useState } from "react";
-import { generateLicense, validateLicense, type LicensePayload } from "@/lib/premium/license";
+import { validateLicense, type LicensePayload } from "@/lib/premium/license";
 import { formatDate } from "@/lib/utils/format";
 
-// ─── Config ───────────────────────────────────────────────────────────────────
-
-// Set NEXT_PUBLIC_ADMIN_PASSWORD in your .env.local (never commit the value).
-// Falls back to a default so the page still works in dev without .env.
-const ADMIN_PASSWORD =
-  (process.env.NEXT_PUBLIC_ADMIN_PASSWORD as string) || "aethera-admin-2026";
-
-const SESSION_KEY = "aethera_admin_authed";
 const MAX_NAME_LENGTH = 120;
 
 const ADMIN_PLANS = [
-  { label: "Bulanan (30 hari)",      days: 30,   price: "Rp75.000" },
-  { label: "Tahunan (365 hari)",     days: 365,  price: "Rp800.000" },
+  { label: "Bulanan (30 hari)",      days: 30,   price: "Promo Rp37.500 (50%)" },
+  { label: "Tahunan (365 hari)",     days: 365,  price: "Promo Rp400.000 (50%)" },
   { label: "Trial (30 hari gratis)", days: 30,   price: "Gratis" },
-  { label: "Lifetime",               days: null, price: "Custom" },
+  { label: "Lifetime",               days: null, price: "Promo Rp2.700.000 (50%)" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -49,15 +41,24 @@ function AdminLogin({ onAuth }: { onAuth: () => void }) {
   const [err, setErr] = useState(false);
   const [attempts, setAttempts] = useState(0);
   const [blocked, setBlocked] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (blocked) return;
+    if (blocked || submitting) return;
 
-    if (pw === ADMIN_PASSWORD) {
-      sessionStorage.setItem(SESSION_KEY, "1");
-      onAuth();
-    } else {
+    setSubmitting(true);
+    try {
+      const response = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: pw }),
+      });
+      if (response.ok) {
+        setPw("");
+        onAuth();
+        return;
+      }
       const next = attempts + 1;
       setAttempts(next);
       setErr(true);
@@ -66,6 +67,10 @@ function AdminLogin({ onAuth }: { onAuth: () => void }) {
         setBlocked(true);
         setTimeout(() => { setBlocked(false); setAttempts(0); setErr(false); }, 60_000);
       }
+    } catch {
+      setErr(true);
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -101,9 +106,10 @@ function AdminLogin({ onAuth }: { onAuth: () => void }) {
             )}
             <button
               type="submit"
+              disabled={submitting}
               style={{ width: "100%", padding: 12, borderRadius: 10, background: "#f5a623", border: "none", color: "#000", fontWeight: 700, fontSize: 14, cursor: "pointer" }}
             >
-              Masuk
+              {submitting ? "Memeriksa..." : "Masuk"}
             </button>
           </form>
         )}
@@ -135,10 +141,15 @@ export default function AdminLicensePage() {
   const [monitorTotal, setMonitorTotal] = useState(0);
   const [monitorLoading, setMonitorLoading] = useState(false);
   const [monitorError, setMonitorError] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState("");
 
   useEffect(() => {
-    setAuthed(sessionStorage.getItem(SESSION_KEY) === "1");
-    setChecking(false);
+    fetch("/api/admin/session")
+      .then((response) => response.json())
+      .then((data: { authenticated?: boolean }) => setAuthed(data.authenticated === true))
+      .catch(() => setAuthed(false))
+      .finally(() => setChecking(false));
   }, []);
 
   // Load activations when switching to monitor tab
@@ -151,9 +162,11 @@ export default function AdminLicensePage() {
     setMonitorLoading(true);
     setMonitorError("");
     try {
-      const res = await fetch("/api/license/list", {
-        headers: { Authorization: `Bearer ${ADMIN_PASSWORD}` },
-      });
+      const res = await fetch("/api/license/list");
+      if (res.status === 401) {
+        setAuthed(false);
+        throw new Error("Sesi admin berakhir. Silakan masuk kembali");
+      }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json() as { activations: typeof activations; total: number };
       setActivations(data.activations || []);
@@ -177,17 +190,36 @@ export default function AdminLicensePage() {
       exp,
       device: cleanDevice || null,
     };
-    const key = await generateLicense(payload);
-    setResult(key);
-    setCopied(false);
-    setHistory((prev) => [{
-      name: cleanName,
-      plan: plan.label,
-      key,
-      exp: exp ? formatDate(new Date(exp)) : "Lifetime",
-      device: cleanDevice || "Tidak terikat (bisa di perangkat mana saja)",
-      generated: new Date().toLocaleString("id-ID"),
-    }, ...prev]);
+    setGenerating(true);
+    setGenerateError("");
+    try {
+      const response = await fetch("/api/admin/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json().catch(() => null) as { key?: string; error?: string } | null;
+      if (response.status === 401) {
+        setAuthed(false);
+        throw new Error("Sesi admin berakhir. Silakan masuk kembali");
+      }
+      if (!response.ok || !data?.key) throw new Error(data?.error ?? "Gagal membuat lisensi");
+      const key = data.key;
+      setResult(key);
+      setCopied(false);
+      setHistory((prev) => [{
+        name: cleanName,
+        plan: plan.label,
+        key,
+        exp: exp ? formatDate(new Date(exp)) : "Lifetime",
+        device: cleanDevice || "Tidak terikat (bisa di perangkat mana saja)",
+        generated: new Date().toLocaleString("id-ID"),
+      }, ...prev]);
+    } catch (err) {
+      setGenerateError(err instanceof Error ? err.message : "Gagal membuat lisensi");
+    } finally {
+      setGenerating(false);
+    }
   };
 
   const handleCopy = (text: string) => {
@@ -230,7 +262,10 @@ export default function AdminLicensePage() {
     window.open(`https://wa.me/?text=${encodeURIComponent(pesan)}`, "_blank");
   };
 
-  const logout = () => { sessionStorage.removeItem(SESSION_KEY); setAuthed(false); };
+  const logout = async () => {
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => undefined);
+    setAuthed(false);
+  };
 
   if (checking) return null;
   if (!authed) return <AdminLogin onAuth={() => setAuthed(true)} />;
@@ -315,8 +350,11 @@ export default function AdminLicensePage() {
           </div>
         </div>
 
-        <button onClick={handleGenerate} style={{ width: "100%", padding: 12, borderRadius: 10, background: "#f5a623", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
-          ⚡ Generate License Key
+        {generateError && (
+          <p style={{ color: "#f44336", fontSize: 12, margin: "0 0 10px" }}>⚠️ {generateError}</p>
+        )}
+        <button disabled={generating} onClick={handleGenerate} style={{ width: "100%", padding: 12, borderRadius: 10, background: "#f5a623", border: "none", color: "#000", fontSize: 14, fontWeight: 700, cursor: "pointer", opacity: generating ? 0.7 : 1 }}>
+          {generating ? "Membuat..." : "⚡ Generate License Key"}
         </button>
       </div>
 
@@ -473,7 +511,7 @@ export default function AdminLicensePage() {
       </div>
 
       <p style={{ textAlign: "center", fontSize: 11, color: "#6b7280" }}>
-        AETHERA UMKM — Admin Panel · Session ini tidak tersimpan setelah tab ditutup
+        AETHERA UMKM — Admin Panel · Sesi aman dan berakhir otomatis
       </p>
     </div>
   );

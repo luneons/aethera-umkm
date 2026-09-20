@@ -63,8 +63,9 @@ public/
 
 ## Privasi
 
-Semua data tersimpan **lokal** di perangkat (IndexedDB). Tidak ada data yang dikirim ke
-server. Backup berkala disarankan via menu Pengaturan.
+Data transaksi utama tersimpan **lokal** di perangkat (IndexedDB). Fitur opsional seperti
+aktivasi lisensi, AI Insight, webhook, dan cloud sync dapat mengirim data yang diperlukan
+ke server atau layanan yang dipilih pengguna. Backup berkala disarankan via menu Pengaturan.
 
 ## Fitur Lanjutan (v2.0 — Fase 3 & 4)
 
@@ -129,7 +130,7 @@ Semua fitur berikut berjalan client-side / offline-first kecuali yang ditandai.
 
 ### Versi Premium / Berlangganan
 - Halaman **Premium** (`/premium`): perbandingan paket + aktivasi license key.
-- Lisensi divalidasi **offline** (HMAC-SHA256, format `payload.signature`). Tersedia tombol "Coba Gratis 30 Hari".
+- Lisensi ditandatangani dan divalidasi di server (HMAC-SHA256, format `payload.signature`); secret tidak pernah masuk bundle browser. Aktivasi dan trial memerlukan koneksi internet.
 - Gating fitur via komponen `PremiumGate`. Fitur premium: AI Insight, Cloud Sync, Multi-pengguna, Laporan Pajak, Webhook, Produk tanpa batas (gratis maks 20 produk).
 - ⚠️ Catatan: gate bersifat *soft* (client-side). Untuk enforcement keras, validasi ke server lisensi.
 
@@ -157,5 +158,7 @@ Semua fitur berikut berjalan client-side / offline-first kecuali yang ditandai.
 - `qrcode` — render QR dinamis QRIS
 
 ## Cara menerbitkan License Key (untuk admin)
-Key dibuat dengan `generateLicense({ name, plan: "premium", exp })` dari `lib/premium/license.ts`
-(payload base64url + HMAC-SHA256 truncated). `exp` epoch ms atau `null` untuk lifetime.
+Atur environment server-only `ADMIN_PASSWORD` dan `LICENSE_SECRET`, lalu buka
+`/admin-license`. Login menghasilkan sesi cookie HttpOnly dan pembuatan key dilakukan oleh
+endpoint terlindungi `/api/admin/generate`. Jangan menggunakan prefix `NEXT_PUBLIC_` untuk
+kedua secret tersebut. `exp` menggunakan epoch ms atau `null` untuk lifetime.
