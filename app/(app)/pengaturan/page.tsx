@@ -15,6 +15,8 @@ import {
   Bell,
   BellOff,
   ImagePlus,
+  MessageCircle,
+  ExternalLink,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card } from "@/components/ui/Card";
@@ -147,6 +149,14 @@ export default function PengaturanPage() {
     a.remove();
     URL.revokeObjectURL(url);
     toast.success("Backup berhasil diunduh");
+  };
+
+  const handleJoinWhatsApp = () => {
+    window.open(
+      "https://chat.whatsapp.com/JLjGz7U14FuFVwDtNA6cQU",
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   const handleRestoreFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -434,6 +444,27 @@ export default function PengaturanPage() {
 
       {/* Demo Data */}
       <SeedButton onDone={() => bumpData()} />
+
+      {/* Community */}
+      <Card className="overflow-hidden border-[#25D366]/30 bg-[#25D366]/5">
+        <div className="flex items-start gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-[#25D366]/15 text-[#25D366]">
+            <MessageCircle size={21} />
+          </span>
+          <div className="min-w-0 flex-1">
+            <h2 className="font-heading text-base font-bold">Komunitas AETHERA</h2>
+            <p className="mt-1 text-sm leading-relaxed text-[var(--color-text-secondary)]">
+              Gabung grup WhatsApp untuk mendapatkan informasi terbaru, bantuan, dan berdiskusi dengan pengguna AETHERA lainnya.
+            </p>
+          </div>
+        </div>
+        <Button
+          className="mt-4 w-full bg-[#25D366] text-white hover:bg-[#20BD5A]"
+          onClick={handleJoinWhatsApp}
+        >
+          <MessageCircle size={17} /> Gabung Grup WhatsApp <ExternalLink size={14} />
+        </Button>
+      </Card>
 
       {/* About */}
       <Card>
