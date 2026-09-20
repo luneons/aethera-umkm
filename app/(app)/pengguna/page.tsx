@@ -13,6 +13,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getUsers, createUser, updateUser, deleteUser } from "@/lib/db/queries/users";
 import { usePremium } from "@/lib/stores/usePremium";
+import { useSession } from "@/lib/stores/useSession";
 import { useConfirm } from "@/lib/stores/useConfirm";
 import { toast } from "@/lib/stores/useToastStore";
 import type { User, UserRole } from "@/lib/db/types";
@@ -114,6 +115,7 @@ export default function PenggunaPage() {
   const checked = usePremium((s) => s.checked);
   const active = usePremium((s) => s.active);
   const confirm = useConfirm((s) => s.confirm);
+  const canManageBusiness = useSession((s) => s.canManageBusiness());
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -150,7 +152,7 @@ export default function PenggunaPage() {
           title="Pengguna"
           subtitle="Kelola kasir & pemilik"
           action={
-            active ? (
+            active && canManageBusiness ? (
               <Button
                 onClick={() => {
                   setEditing(null);
@@ -162,6 +164,12 @@ export default function PenggunaPage() {
             ) : null
           }
         />
+
+        {active && !canManageBusiness && (
+          <Card className="mb-4 border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10">
+            <p className="text-sm text-[var(--color-warning)]">Hanya pemilik yang dapat mengelola pengguna.</p>
+          </Card>
+        )}
 
         {!checked ? null : !active ? (
           <PremiumGate feature="multi_user">{null}</PremiumGate>
@@ -216,19 +224,22 @@ export default function PenggunaPage() {
                     </div>
                     <div className="flex shrink-0 items-center gap-0.5">
                       <button
+                        disabled={!canManageBusiness}
                         onClick={() => {
+                          if (!canManageBusiness) return;
                           setEditing(u);
                           setFormOpen(true);
                         }}
                         aria-label="Edit"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-info)]"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-info)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         <Pencil size={15} />
                       </button>
                       <button
+                        disabled={!canManageBusiness}
                         onClick={() => handleDelete(u)}
                         aria-label="Hapus"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-danger)]"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-[var(--color-text-muted)] hover:bg-[var(--color-bg-elevated)] hover:text-[var(--color-danger)] disabled:cursor-not-allowed disabled:opacity-30"
                       >
                         <Trash2 size={15} />
                       </button>
@@ -241,12 +252,14 @@ export default function PenggunaPage() {
         )}
       </div>
 
-      <UserForm
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        user={editing}
-        onSaved={load}
-      />
+      {canManageBusiness && (
+        <UserForm
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          user={editing}
+          onSaved={load}
+        />
+      )}
     </PageTransition>
   );
 }

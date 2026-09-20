@@ -166,8 +166,45 @@ export async function execute(
   return lastId;
 }
 
+const MAX_IMPORT_BYTES = 50 * 1024 * 1024;
+const RESTORE_BACKUP_KEY = `${IDB_KEY}_restore_backup`;
+const REQUIRED_TABLES = [
+  "business_profile",
+  "products",
+  "sales",
+  "purchases",
+  "categories",
+  "app_settings",
+];
+
+function assertValidAppDatabase(candidate: Database): void {
+  const rows = candidate.exec("SELECT name FROM sqlite_master WHERE type = 'table'");
+  const found = rows.length ? rows[0].values.map((row) => String(row[0])) : [];
+  const missing = REQUIRED_TABLES.filter((table) => !found.includes(table));
+  if (missing.length) {
+    throw new Error(`Backup tidak kompatibel. Tabel tidak ditemukan: ${missing.join(", ")}`);
+  }
+}
+
+/** Save a safety backup in IndexedDB before replacing the active database. */
+export async function saveRestoreBackup(): Promise<void> {
+  if (!db) return;
+  const data = db.export();
+  const idb = await openIndexedDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = idb.transaction(IDB_STORE, "readwrite");
+    tx.objectStore(IDB_STORE).put(data.slice(0), RESTORE_BACKUP_KEY);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+}
+
 /** Replace the entire database from an exported byte array (restore). */
 export async function importDatabase(data: Uint8Array): Promise<void> {
+  if (data.length > MAX_IMPORT_BYTES) {
+    throw new Error("File backup terlalu besar (maks 50 MB)");
+  }
+
   // Validate SQLite magic bytes: first 16 bytes must be "SQLite format 3\000"
   const MAGIC = [83,81,76,105,116,101,32,102,111,114,109,97,116,32,51,0];
   if (data.length < 512) throw new Error("File backup tidak valid: terlalu kecil");
@@ -176,18 +213,31 @@ export async function importDatabase(data: Uint8Array): Promise<void> {
   }
 
   const sql = await getSqlJs();
-  // Validate by attempting to open and read a known table.
   const candidate = new sql.Database(data);
   try {
     candidate.exec("SELECT count(*) FROM sqlite_master");
-  } catch {
+    assertValidAppDatabase(candidate);
+  } catch (err) {
     candidate.close();
-    throw new Error("File backup tidak valid: tidak dapat dibaca");
+    throw err instanceof Error
+      ? err
+      : new Error("File backup tidak valid: tidak dapat dibaca");
   }
-  if (db) db.close();
-  db = candidate;
-  runMigrations(db);
-  await saveDB();
+
+  // Always retain the previous database before overwrite.
+  await saveRestoreBackup();
+
+  const previous = db;
+  try {
+    db = candidate;
+    runMigrations(db);
+    await saveDB();
+    previous?.close();
+  } catch (err) {
+    candidate.close();
+    db = previous;
+    throw err;
+  }
 }
 
 /** Export the database as bytes (for backup download). */

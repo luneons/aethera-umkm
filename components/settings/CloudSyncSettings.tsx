@@ -56,7 +56,7 @@ export function CloudSyncSettings() {
   const pull = async () => {
     const ok = await confirm({
       title: "Tarik data dari cloud?",
-      message: "Data lokal saat ini akan diganti dengan data dari cloud.",
+      message: "Data lokal saat ini akan diganti dengan data dari cloud. Backup keamanan lokal akan dibuat otomatis sebelum proses restore.",
       confirmLabel: "Tarik",
       danger: false,
     });

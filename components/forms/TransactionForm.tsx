@@ -17,8 +17,8 @@ import {
   fromSqlDateTime,
 } from "@/lib/utils/format";
 import { shake, successPulse } from "@/lib/animations/gsap";
-import { createSale, updateSale, getSaleById } from "@/lib/db/queries/sales";
-import { createPurchase, updatePurchase, getPurchaseById } from "@/lib/db/queries/purchases";
+import { createSaleBatch, updateSale, getSaleById } from "@/lib/db/queries/sales";
+import { createPurchaseBatch, updatePurchase, getPurchaseById } from "@/lib/db/queries/purchases";
 import { getCategories } from "@/lib/db/queries/categories";
 import { nextInvoiceNumber, nextPONumber } from "@/lib/db/queries/invoices";
 import { evaluateAchievements } from "@/lib/achievements";
@@ -258,28 +258,26 @@ export function TransactionForm() {
             cashierName: currentUser?.name ?? null,
           });
         } else {
-          // Create: one sale row per cart line (each row tracks stock independently)
-          for (const line of cart) {
-            await createSale({
-              productId: line.productId,
-              productName: line.name,
-              categoryId: line.categoryId,
-              quantity: parseFloat(line.quantity),
-              unitPrice: parseRupiah(line.unitPrice),
-              totalAmount: lineTotal(line),
-              discountAmount: parseRupiah(line.discount),
-              shippingFee: cart.indexOf(line) === 0 ? parseRupiah(form.shippingFee) : 0,
-              paymentMethod: form.paymentMethod,
-              channel: form.channel || null,
-              notes: form.notes || null,
-              transactionAt: form.transactionAt,
-              customerId: form.customerId,
-              customerName: form.customerName || null,
-              invoiceNumber: form.invoiceNumber || null,
-              cashierId: currentUser?.id ?? null,
-              cashierName: currentUser?.name ?? null,
-            });
-          }
+          // Create all cart rows atomically so partial invoices cannot be saved.
+          await createSaleBatch(cart.map((line, index) => ({
+            productId: line.productId,
+            productName: line.name,
+            categoryId: line.categoryId,
+            quantity: parseFloat(line.quantity),
+            unitPrice: parseRupiah(line.unitPrice),
+            totalAmount: lineTotal(line),
+            discountAmount: parseRupiah(line.discount),
+            shippingFee: index === 0 ? parseRupiah(form.shippingFee) : 0,
+            paymentMethod: form.paymentMethod,
+            channel: form.channel || null,
+            notes: form.notes || null,
+            transactionAt: form.transactionAt,
+            customerId: form.customerId,
+            customerName: form.customerName || null,
+            invoiceNumber: form.invoiceNumber || null,
+            cashierId: currentUser?.id ?? null,
+            cashierName: currentUser?.name ?? null,
+          })));
           if (premiumActive)
             void fireWebhook("sale.created", { total: grandTotal, channel: form.channel });
         }
@@ -304,25 +302,23 @@ export function TransactionForm() {
             invoiceNumber: form.invoiceNumber || null,
           });
         } else {
-          for (const line of cart) {
-            await createPurchase({
-              productId: line.productId,
-              itemName: line.name,
-              categoryId: line.categoryId,
-              quantity: parseFloat(line.quantity),
-              unitPrice: parseRupiah(line.unitPrice),
-              totalAmount: lineTotal(line),
-              discountAmount: parseRupiah(line.discount),
-              shippingFee: cart.indexOf(line) === 0 ? parseRupiah(form.shippingFee) : 0,
-              supplier: form.supplier || null,
-              supplierId: form.supplierId,
-              paymentMethod: form.paymentMethod,
-              channel: form.channel || null,
-              notes: form.notes || null,
-              transactionAt: form.transactionAt,
-              invoiceNumber: form.invoiceNumber || null,
-            });
-          }
+          await createPurchaseBatch(cart.map((line, index) => ({
+            productId: line.productId,
+            itemName: line.name,
+            categoryId: line.categoryId,
+            quantity: parseFloat(line.quantity),
+            unitPrice: parseRupiah(line.unitPrice),
+            totalAmount: lineTotal(line),
+            discountAmount: parseRupiah(line.discount),
+            shippingFee: index === 0 ? parseRupiah(form.shippingFee) : 0,
+            supplier: form.supplier || null,
+            supplierId: form.supplierId,
+            paymentMethod: form.paymentMethod,
+            channel: form.channel || null,
+            notes: form.notes || null,
+            transactionAt: form.transactionAt,
+            invoiceNumber: form.invoiceNumber || null,
+          })));
           if (premiumActive)
             void fireWebhook("purchase.created", { total: grandTotal });
         }

@@ -22,6 +22,7 @@ import { generateReceiptPDF } from "@/lib/utils/export";
 import { useTxDrawer } from "@/lib/stores/useTxDrawer";
 import { useAppStore } from "@/lib/stores/useAppStore";
 import { useConfirm } from "@/lib/stores/useConfirm";
+import { useSession } from "@/lib/stores/useSession";
 import { toast } from "@/lib/stores/useToastStore";
 import { todayRange, thisWeekRange, thisMonthRange } from "@/lib/utils/ranges";
 import { formatRupiah, formatDateTime, fromSqlDateTime } from "@/lib/utils/format";
@@ -32,6 +33,7 @@ export default function PembelianPage() {
   const dataVersion = useAppStore((s) => s.dataVersion);
   const bumpData = useAppStore((s) => s.bumpData);
   const confirm = useConfirm((s) => s.confirm);
+  const canManageBusiness = useSession((s) => s.canManageBusiness());
 
   const [period, setPeriod] = useState<PeriodKey>("month");
   const [search, setSearch] = useState("");
@@ -184,8 +186,8 @@ export default function PembelianPage() {
                     p.supplier ? ` · ${p.supplier}` : ""
                   }`}
                   amount={p.total_amount}
-                  onEdit={() => openDrawer("pembelian", p.id)}
-                  onDelete={() => handleDelete(p.id)}
+                  onEdit={() => canManageBusiness ? openDrawer("pembelian", p.id) : toast.error("Hanya pemilik yang dapat mengedit transaksi")}
+                  onDelete={() => canManageBusiness ? handleDelete(p.id) : toast.error("Hanya pemilik yang dapat menghapus transaksi")}
                   onPrint={() => handlePrint(p)}
                 />
               </div>

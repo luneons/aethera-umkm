@@ -17,11 +17,16 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const ready = useAppStore((s) => s.ready);
   const bumpData = useAppStore((s) => s.bumpData);
   const [showSplash, setShowSplash] = useState(true);
+  const [fatalError, setFatalError] = useState<string | null>(null);
   const lock = useLockStore((s) => s.lock);
   const refreshPremium = usePremium((s) => s.refresh);
 
   useEffect(() => {
-    init();
+    init().catch((err) => {
+      console.error("[app] gagal memulai database", err);
+      setFatalError(err instanceof Error ? err.message : "Database lokal gagal dimuat");
+      setShowSplash(false);
+    });
   }, [init]);
 
   // Load premium license status.
@@ -49,6 +54,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (!ready) return;
     isPinEnabled().then((enabled) => {
       if (enabled) lock();
+    }).catch((err) => {
+      console.error("[security] gagal memeriksa PIN", err);
     });
   }, [ready, lock]);
 
@@ -57,8 +64,24 @@ export function Providers({ children }: { children: React.ReactNode }) {
     if (!ready) return;
     processDueRecurring().then((n) => {
       if (n > 0) bumpData();
+    }).catch((err) => {
+      console.error("[recurring] gagal memproses transaksi", err);
     });
   }, [ready, bumpData]);
+
+  if (fatalError) {
+    return (
+      <main className="grid min-h-dvh place-items-center bg-[var(--color-bg-primary)] p-6">
+        <div className="w-full max-w-md rounded-2xl border border-[var(--color-danger)]/30 bg-[var(--color-bg-card)] p-6 text-center">
+          <h1 className="font-heading text-xl font-bold">Database tidak dapat dimuat</h1>
+          <p className="mt-2 text-sm text-[var(--color-text-secondary)]">{fatalError}</p>
+          <button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-[var(--color-accent-gold)] px-5 py-3 font-bold text-black">
+            Muat Ulang
+          </button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <>

@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/Button";
 import { Field, Input } from "@/components/ui/Input";
 import { useAppStore, type Theme } from "@/lib/stores/useAppStore";
 import { useConfirm } from "@/lib/stores/useConfirm";
+import { useSession } from "@/lib/stores/useSession";
 import { toast } from "@/lib/stores/useToastStore";
 import { saveBusinessProfile, setSetting, getSetting } from "@/lib/db/queries/settings";
 import { exportDatabase, importDatabase, resetDatabase } from "@/lib/db/client";
@@ -60,6 +61,7 @@ export default function PengaturanPage() {
   const setTheme = useAppStore((s) => s.setTheme);
   const bumpData = useAppStore((s) => s.bumpData);
   const confirm = useConfirm((s) => s.confirm);
+  const canManageBusiness = useSession((s) => s.canManageBusiness());
 
   const [name, setName] = useState("");
   const [type, setType] = useState("");
@@ -151,10 +153,18 @@ export default function PengaturanPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
+    if (file.size > 50 * 1024 * 1024) {
+      toast.error("Ukuran file backup maksimal 50 MB");
+      return;
+    }
+    if (!/\.(db|sqlite)$/i.test(file.name)) {
+      toast.error("File harus berformat .db atau .sqlite");
+      return;
+    }
     const ok = await confirm({
       title: "Pulihkan data?",
       message:
-        "Data saat ini akan diganti dengan isi file backup. Pastikan kamu sudah mem-backup data yang ada.",
+        "Data saat ini akan diganti dengan isi file backup. Backup keamanan lokal akan dibuat otomatis sebelum restore.",
       confirmLabel: "Pulihkan",
       danger: false,
     });
@@ -385,10 +395,15 @@ export default function PengaturanPage() {
           kehilangan data.
         </p>
         <div className="flex flex-col gap-2">
-          <Button variant="outline" onClick={handleBackup}>
+          {!canManageBusiness && (
+            <p className="rounded-xl border border-[var(--color-warning)]/30 bg-[var(--color-warning)]/10 px-3 py-2 text-xs text-[var(--color-warning)]">
+              Hanya pemilik yang dapat melakukan backup, restore, dan reset data.
+            </p>
+          )}
+          <Button variant="outline" disabled={!canManageBusiness} onClick={handleBackup}>
             <Download size={17} /> Backup Database (.db)
           </Button>
-          <Button variant="outline" onClick={() => fileRef.current?.click()}>
+          <Button variant="outline" disabled={!canManageBusiness} onClick={() => fileRef.current?.click()}>
             <Upload size={17} /> Pulihkan dari File
           </Button>
           <input
@@ -398,7 +413,7 @@ export default function PengaturanPage() {
             className="hidden"
             onChange={handleRestoreFile}
           />
-          <Button variant="danger" onClick={handleReset}>
+          <Button variant="danger" disabled={!canManageBusiness} onClick={handleReset}>
             <Trash2 size={17} /> Reset Semua Data
           </Button>
         </div>
