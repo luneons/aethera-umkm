@@ -43,13 +43,15 @@ import { getDeviceId } from "@/lib/premium/device";
 // ─── Kontak & Harga ───────────────────────────────────────────────────────────
 
 const WA_NUMBER = "6281293159011";
-const DISKON_PCT = 50;
+const DISKON_BULANAN_PCT = 50;
+const DISKON_TAHUNAN_PCT = 75;
+const DISKON_LIFETIME_PCT = 75;
 const HARGA_BULANAN_NORMAL = 75_000;
 const HARGA_TAHUNAN_NORMAL = 800_000;
 const HARGA_LIFETIME_NORMAL = 5_400_000;
-const HARGA_BULANAN = HARGA_BULANAN_NORMAL * (1 - DISKON_PCT / 100);
-const HARGA_TAHUNAN = HARGA_TAHUNAN_NORMAL * (1 - DISKON_PCT / 100);
-const HARGA_LIFETIME = HARGA_LIFETIME_NORMAL * (1 - DISKON_PCT / 100);
+const HARGA_BULANAN = HARGA_BULANAN_NORMAL * (1 - DISKON_BULANAN_PCT / 100);
+const HARGA_TAHUNAN = HARGA_TAHUNAN_NORMAL * (1 - DISKON_TAHUNAN_PCT / 100);
+const HARGA_LIFETIME = HARGA_LIFETIME_NORMAL * (1 - DISKON_LIFETIME_PCT / 100);
 const HEMAT_TAHUNAN = HARGA_TAHUNAN_NORMAL - HARGA_TAHUNAN;
 
 function formatRp(n: number) {
@@ -60,11 +62,11 @@ function openWA(plan: "bulanan" | "tahunan" | "lifetime", deviceId: string) {
   const devLine = deviceId ? `\n\nDevice ID saya: ${deviceId}` : "";
   let pesan = "";
   if (plan === "bulanan") {
-    pesan = `Halo, saya ingin mengambil *BIG PROMO 50%* AETHERA Premium Bulanan (${formatRp(HARGA_BULANAN)}/bln dari ${formatRp(HARGA_BULANAN_NORMAL)}). Mohon info cara pembayarannya.${devLine}`;
+    pesan = `Halo, saya ingin mengambil *BIG PROMO ${DISKON_BULANAN_PCT}%* AETHERA Premium Bulanan (${formatRp(HARGA_BULANAN)}/bln dari ${formatRp(HARGA_BULANAN_NORMAL)}). Mohon info cara pembayarannya.${devLine}`;
   } else if (plan === "tahunan") {
-    pesan = `Halo, saya ingin mengambil *BIG PROMO 50%* AETHERA Premium Tahunan (${formatRp(HARGA_TAHUNAN)}/thn dari ${formatRp(HARGA_TAHUNAN_NORMAL)}). Mohon info cara pembayarannya.${devLine}`;
+    pesan = `Halo, saya ingin mengambil *BIG PROMO ${DISKON_TAHUNAN_PCT}%* AETHERA Premium Tahunan (${formatRp(HARGA_TAHUNAN)}/thn dari ${formatRp(HARGA_TAHUNAN_NORMAL)}). Mohon info cara pembayarannya.${devLine}`;
   } else {
-    pesan = `Halo, saya ingin mengambil *BIG PROMO 50%* AETHERA Premium Lifetime (${formatRp(HARGA_LIFETIME)} dari ${formatRp(HARGA_LIFETIME_NORMAL)} — bayar sekali, pakai selamanya). Mohon info cara pembayarannya.${devLine}`;
+    pesan = `Halo, saya ingin mengambil *BIG PROMO ${DISKON_LIFETIME_PCT}%* AETHERA Premium Lifetime (${formatRp(HARGA_LIFETIME)} dari ${formatRp(HARGA_LIFETIME_NORMAL)} — bayar sekali, pakai selamanya). Mohon info cara pembayarannya.${devLine}`;
   }
   window.open(
     `https://wa.me/${WA_NUMBER}?text=${encodeURIComponent(pesan)}`,
@@ -317,7 +319,7 @@ export default function PremiumPage() {
               <div className="relative">
                 <div className="mb-2 flex items-center gap-2">
                   <Crown size={22} />
-                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">BIG PROMO 50% · AETHERA PREMIUM</span>
+                  <span className="text-xs font-bold uppercase tracking-widest opacity-80">BIG PROMO HINGGA 75% · AETHERA PREMIUM</span>
                 </div>
                 <h2 className="font-heading text-2xl font-extrabold leading-tight">
                   Catat lebih cepat,<br />untung lebih jelas.
@@ -378,7 +380,7 @@ export default function PremiumPage() {
                     )}
                   >
                     <span className="absolute -top-2.5 right-3 rounded-full bg-[var(--color-accent-gold)] px-2 py-0.5 text-[10px] font-extrabold text-black shadow">
-                      BIG PROMO {DISKON_PCT}%
+                      BIG PROMO {DISKON_TAHUNAN_PCT}%
                     </span>
                     <div className="flex items-center gap-1">
                       <p className="text-xs font-semibold text-[var(--color-accent-gold)] uppercase tracking-wide">Tahunan</p>
@@ -432,7 +434,7 @@ export default function PremiumPage() {
                     <p className="mt-2 font-heading text-4xl font-black tracking-tight">{formatRp(HARGA_LIFETIME)}</p>
                     <p className="text-sm text-[var(--color-text-muted)] line-through">{formatRp(HARGA_LIFETIME_NORMAL)}</p>
                     <p className="mt-0.5 text-sm font-semibold text-purple-200">
-                      BIG PROMO 50% · Bayar sekali, pakai seumur hidup. 🚀
+                      BIG PROMO {DISKON_LIFETIME_PCT}% · Bayar sekali, pakai seumur hidup. 🚀
                     </p>
                     <p className="mt-2 text-xs leading-relaxed text-[var(--color-text-secondary)]">
                       Sekali beli, semua fitur premium jadi milikmu selamanya — tanpa tagihan bulanan,

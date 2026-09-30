@@ -20,9 +20,9 @@ const MAX_NAME_LENGTH = 120;
 
 const ADMIN_PLANS = [
   { label: "Bulanan (30 hari)",      days: 30,   price: "Promo Rp37.500 (50%)" },
-  { label: "Tahunan (365 hari)",     days: 365,  price: "Promo Rp400.000 (50%)" },
+  { label: "Tahunan (365 hari)",     days: 365,  price: "Promo Rp200.000 (75%)" },
   { label: "Trial (30 hari gratis)", days: 30,   price: "Gratis" },
-  { label: "Lifetime",               days: null, price: "Promo Rp2.700.000 (50%)" },
+  { label: "Lifetime",               days: null, price: "Promo Rp1.350.000 (75%)" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

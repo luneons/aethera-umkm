@@ -164,7 +164,7 @@ export default function DashboardPage() {
           className="fixed inset-0 z-[250] grid place-items-center bg-black/75 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label={activePopup === "promo" ? "BIG PROMO AETHERA Premium 50%" : "Gabung grup WhatsApp AETHERA"}
+          aria-label={activePopup === "promo" ? "BIG PROMO AETHERA Premium hingga 75%" : "Gabung grup WhatsApp AETHERA"}
           onClick={closePopup}
         >
           <div
@@ -183,7 +183,7 @@ export default function DashboardPage() {
               <Link href="/premium" onClick={closePopup} aria-label="Lihat dan beli paket AETHERA Premium">
                 <Image
                   src="/promoaethera.png"
-                  alt="BIG PROMO AETHERA Premium diskon 50%"
+                  alt="Promo AETHERA Premium dengan diskon hingga 75%"
                   width={1080}
                   height={1350}
                   priority
